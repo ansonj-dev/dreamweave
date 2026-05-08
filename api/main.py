@@ -7,13 +7,16 @@ import os
 import re
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.responses import FileResponse
 from starlette.responses import StreamingResponse
 
 from core.orchestrator import DreamWeaveOrchestrator
@@ -87,6 +90,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
 
 
 def get_orchestrator() -> DreamWeaveOrchestrator:
@@ -312,3 +319,22 @@ def extract_uploaded_text(filename: str, content: bytes) -> str:
 
 def sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=True)}\n\n"
+
+
+@app.get("/")
+async def serve_frontend_root() -> FileResponse | dict[str, str]:
+    index = FRONTEND_DIST / "index.html"
+    if index.exists():
+        return FileResponse(index)
+    return {
+        "status": "DREAMWEAVE API running",
+        "frontend": "Build frontend with: cd frontend && npm install && VITE_DREAMWEAVE_API=http://165.245.142.189:8000 npm run build",
+    }
+
+
+@app.get("/app/{path:path}")
+async def serve_frontend_app(path: str) -> FileResponse:
+    index = FRONTEND_DIST / "index.html"
+    if not index.exists():
+        raise HTTPException(status_code=404, detail="Frontend build not found. Run npm run build in frontend.")
+    return FileResponse(index)
