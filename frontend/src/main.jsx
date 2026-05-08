@@ -592,7 +592,7 @@ function RightRail({ graph, logs, result }) {
         </div>
       </section>
       <section className="kick-log">
-        <div className="rail-head"><span>Kick Activity Log</span><button type="button">View All Logs -></button></div>
+        <div className="rail-head"><span>Kick Activity Log</span><button type="button">View All Logs &rarr;</button></div>
         {logs.map((log) => (
           <div className={classNames("log-row", log.fire && "fire")} key={`${log.time}-${log.text}`}>
             <i />

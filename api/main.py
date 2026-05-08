@@ -321,8 +321,8 @@ def sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=True)}\n\n"
 
 
-@app.get("/")
-async def serve_frontend_root() -> FileResponse | dict[str, str]:
+@app.get("/", response_model=None)
+async def serve_frontend_root():
     index = FRONTEND_DIST / "index.html"
     if index.exists():
         return FileResponse(index)
@@ -332,8 +332,8 @@ async def serve_frontend_root() -> FileResponse | dict[str, str]:
     }
 
 
-@app.get("/app/{path:path}")
-async def serve_frontend_app(path: str) -> FileResponse:
+@app.get("/app/{path:path}", response_model=None)
+async def serve_frontend_app(path: str):
     index = FRONTEND_DIST / "index.html"
     if not index.exists():
         raise HTTPException(status_code=404, detail="Frontend build not found. Run npm run build in frontend.")
