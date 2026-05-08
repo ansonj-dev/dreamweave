@@ -91,9 +91,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
-if FRONTEND_DIST.exists():
-    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
+FRONTEND_HTML = Path(__file__).resolve().parents[1] / "frontend" / "dreamweave.html"
 
 
 def get_orchestrator() -> DreamWeaveOrchestrator:
@@ -346,18 +344,9 @@ def build_retrieval_answer(query: str, context: dict[str, Any]) -> str:
 
 @app.get("/", response_model=None)
 async def serve_frontend_root():
-    index = FRONTEND_DIST / "index.html"
-    if index.exists():
-        return FileResponse(index)
+    if FRONTEND_HTML.exists():
+        return FileResponse(FRONTEND_HTML, media_type="text/html")
     return {
         "status": "DREAMWEAVE API running",
-        "frontend": "Build frontend with: cd frontend && npm install && VITE_DREAMWEAVE_API=http://165.245.142.189:8000 npm run build",
+        "docs": "/docs",
     }
-
-
-@app.get("/app/{path:path}", response_model=None)
-async def serve_frontend_app(path: str):
-    index = FRONTEND_DIST / "index.html"
-    if not index.exists():
-        raise HTTPException(status_code=404, detail="Frontend build not found. Run npm run build in frontend.")
-    return FileResponse(index)

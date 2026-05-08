@@ -1,0 +1,3273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DREAMWEAVE — Layered Memory Intelligence Framework</title>
+<!--
+  DREAMWEAVE - Demo Mode
+  
+  This is currently running with MOCK DATA for demonstration purposes.
+  
+  To connect to your real backend:
+  
+  1. CONNECTION STATUS:
+     - Call: setConnectionStatus(true) when backend connects
+     - Call: setConnectionStatus(false) when disconnected
+  
+  2. GRAPH VISUALIZATION:
+     - Call: updateGraphData(nodes, edges, conflicts)
+     - See documentation in JavaScript section for data format
+  
+  3. CHAT RESPONSES:
+     - Replace mockResponses array with real API calls
+     - Update sendMessage() function to call your backend
+  
+  4. SOURCES & INGESTION:
+     - Update doIngest() to send data to your backend
+     - Fetch real sources list from your API
+  
+  All demo data is clearly marked with comments in the code.
+-->
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;700;800&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #080c14;
+    --bg-mid: #0d1320;
+    --bg-panel: #111827;
+    --bg-card: #141e2e;
+    --bg-hover: #1a2540;
+    --border: rgba(255,255,255,0.07);
+    --border-bright: rgba(255,255,255,0.12);
+    --text-primary: #e8edf5;
+    --text-secondary: #8b9ab5;
+    --text-muted: #4a5a78;
+    --accent-purple: #7c3aed;
+    --accent-purple-bright: #9d5cf6;
+    --accent-blue: #2563eb;
+    --accent-blue-bright: #3b82f6;
+    --accent-teal: #0d9488;
+    --accent-teal-bright: #14b8a6;
+    --accent-amber: #d97706;
+    --accent-amber-bright: #f59e0b;
+    --accent-red: #dc2626;
+    --accent-red-bright: #ef4444;
+    --accent-green: #16a34a;
+    --accent-green-bright: #22c55e;
+    --l1-color: #3b82f6;
+    --l2-color: #14b8a6;
+    --l3-color: #f59e0b;
+    --kick-color: #ef4444;
+    --sidebar-w: 260px;
+    --right-w: 380px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── LAYOUT ─── */
+  .app {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ─── LEFT SIDEBAR ─── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .sidebar::-webkit-scrollbar { display: none; }
+
+  .logo-area {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-rings {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+  .ring-outer {
+    animation: rotateOuter 12s linear infinite;
+    transform-origin: 14px 14px;
+  }
+  .ring-middle {
+    animation: rotateMiddle 8s linear infinite reverse;
+    transform-origin: 14px 14px;
+  }
+  .ring-inner {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  @keyframes rotateOuter { to { transform: rotate(360deg); } }
+  @keyframes rotateMiddle { to { transform: rotate(360deg); } }
+  @keyframes pulse-dot {
+    0%,100% { opacity: 0.7; r: 2.5; }
+    50% { opacity: 1; r: 3.5; }
+  }
+  .logo-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+  .logo-text h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+  .logo-text p {
+    font-size: 8px;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+    opacity: 1;
+  }
+
+  /* Connection Status */
+  .connection-status {
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.offline {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239,68,68,0.4);
+  }
+  .status-dot.online {
+    background: #22c55e;
+    box-shadow: 0 0 8px rgba(34,197,94,0.4);
+    animation: pulse-status 2s ease-in-out infinite;
+  }
+  @keyframes pulse-status {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .status-text {
+    color: var(--text-muted);
+  }
+  .status-text.offline {
+    color: #ef4444;
+  }
+  .status-text.online {
+    color: #22c55e;
+  }
+
+  .nav-section { padding: 14px 12px 8px; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+    margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .nav-item.active {
+    background: rgba(124,58,237,0.15);
+    color: #a78bfa;
+    border: 1px solid rgba(124,58,237,0.25);
+  }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 16px;
+  }
+
+  .sources-header {
+    padding: 10px 20px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sources-header span {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .upload-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    color: #a78bfa;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .upload-btn:hover { background: rgba(124,58,237,0.25); }
+  .upload-btn svg { width: 12px; height: 12px; }
+
+  .source-list { padding: 0 12px; }
+  .source-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 2px;
+  }
+  .source-item:hover { background: var(--bg-hover); }
+  .source-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+  .source-icon.pdf { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+  .source-icon.md { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+  .source-icon.txt { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); }
+  .source-info { flex: 1; min-width: 0; }
+  .source-name { font-size: 12px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .source-meta { font-size: 10px; color: var(--text-muted); margin-top: 1px; font-family: 'JetBrains Mono', monospace; }
+  .view-all-link {
+    display: block;
+    padding: 8px 20px;
+    font-size: 12px;
+    color: var(--accent-purple-bright);
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .view-all-link:hover { color: #c4b5fd; }
+
+  .system-status-card {
+    margin: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .status-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .status-icon {
+    width: 28px;
+    height: 28px;
+    background: rgba(34,197,94,0.12);
+    border: 1px solid rgba(34,197,94,0.25);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .status-icon svg { width: 14px; height: 14px; color: #22c55e; }
+  .status-title { font-size: 12px; font-weight: 600; }
+  .status-online { font-size: 10px; color: #22c55e; }
+  .status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .status-label { font-size: 11px; color: var(--text-muted); }
+  .status-value { font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+  .status-value.amber { color: var(--accent-amber-bright); }
+  .progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 4px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    transition: width 0.5s ease;
+  }
+  .progress-fill.amber { background: linear-gradient(90deg, #f59e0b, #d97706); }
+
+  /* ─── MAIN CENTER ─── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .top-bar {
+    background: #0a0e1a;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 0;
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    height: 80px;
+    flex-shrink: 0;
+  }
+
+  .layers-strip {
+    display: flex;
+    gap: 0;
+    flex: 1;
+  }
+  .layer-chip {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 16px 24px;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .layer-chip:last-child { border-right: none; }
+  .layer-chip:hover { background: rgba(255,255,255,0.02); }
+  .layer-chip.active { background: rgba(255,255,255,0.03); }
+  
+  .layer-num {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+    opacity: 0.5;
+  }
+  .layer-info { 
+    display: flex; 
+    flex-direction: column;
+    gap: 2px;
+  }
+  .layer-name { 
+    font-size: 14px; 
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .layer-sub { 
+    font-size: 10px; 
+    color: var(--text-secondary);
+    opacity: 0.8;
+  }
+  
+  /* Layer-specific colors */
+  .l1-chip .layer-num { color: var(--l1-color); }
+  .l1-chip .layer-name { color: var(--l1-color); }
+  
+  .l2-chip .layer-num { color: var(--l2-color); }
+  .l2-chip .layer-name { color: var(--l2-color); }
+  
+  .l3-chip .layer-num { color: var(--l3-color); }
+  .l3-chip .layer-name { color: var(--l3-color); }
+  
+  .l4-chip .layer-num { color: var(--accent-purple-bright); opacity: 0.3; }
+  .l4-chip .layer-name { color: var(--accent-purple-bright); opacity: 0.3; }
+  .l4-chip .layer-sub { opacity: 0.3; }
+  
+  /* Status badges */
+  .layer-status {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-muted);
+  }
+  .layer-status.idle { 
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.3);
+  }
+  .layer-status.active { 
+    background: rgba(52,211,153,0.1);
+    color: var(--l2-color);
+  }
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #3b82f6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    border: 2px solid rgba(255,255,255,0.15);
+    position: relative;
+    margin: 0 20px;
+    flex-shrink: 0;
+  }
+  .avatar::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 9px;
+    height: 9px;
+    background: #22c55e;
+    border-radius: 50%;
+    border: 2px solid #0a0e1a;
+  }
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bg-hover) transparent;
+  }
+  .chat-area::-webkit-scrollbar { width: 6px; }
+  .chat-area::-webkit-scrollbar-track { background: transparent; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 3px; }
+
+  .user-bubble {
+    background: linear-gradient(135deg, rgba(124,58,237,0.18), rgba(59,130,246,0.18));
+    border: 1px solid rgba(124,58,237,0.25);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 100%;
+  }
+  .user-bubble-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #7c3aed, #3b82f6);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .user-bubble-icon svg { width: 14px; height: 14px; }
+  .user-bubble p { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+
+  .answer-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .answer-header {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .answer-header-left { display: flex; align-items: center; gap: 10px; }
+  .answer-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--l1-color);
+    text-transform: uppercase;
+  }
+  .answer-badge svg { width: 14px; height: 14px; }
+  .kick-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 6px;
+    padding: 3px 9px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--kick-color);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    animation: kickPulse 2s ease-in-out infinite;
+  }
+  @keyframes kickPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    50% { box-shadow: 0 0 8px rgba(239,68,68,0.3); }
+  }
+  .kick-badge svg { width: 10px; height: 10px; }
+  .answer-time { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+  .answer-body { padding: 18px 20px; }
+  .answer-text { 
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px; 
+    line-height: 1.7; 
+    color: var(--text-primary); 
+  }
+  
+  /* Typing animation */
+  .typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--accent-purple-bright);
+    margin-left: 2px;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  /* Retrieval Summary */
+  .retrieval-summary { padding: 0 20px 20px; }
+  .retrieval-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .retrieval-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  .retrieval-card {
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .retrieval-card:hover { border-color: var(--border-bright); background: var(--bg-hover); }
+  .rc-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+  .rc-icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .rc-title { font-size: 12px; font-weight: 600; }
+  .rc-count { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; }
+  .rc-l1 .rc-title { color: var(--l1-color); }
+  .rc-l2 .rc-title { color: var(--l2-color); }
+  .rc-l3 .rc-title { color: var(--l3-color); }
+  .rc-kick .rc-title { color: var(--kick-color); }
+  .rc-bullets { list-style: none; }
+  .rc-bullets li {
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding: 2px 0;
+    padding-left: 10px;
+    position: relative;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rc-bullets li::before { content: '•'; position: absolute; left: 0; color: var(--text-muted); }
+  .rc-score {
+    font-size: 9px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 2px;
+    opacity: 0.7;
+  }
+  .rc-pattern-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+  .rc-pattern-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .rc-pattern-name {
+    flex: 1;
+    color: var(--text-secondary);
+  }
+  .rc-pattern-confidence {
+    font-size: 9px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .rc-kick-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 6px; }
+  .rc-rerank { font-size: 11px; color: var(--kick-color); cursor: pointer; text-decoration: underline; }
+  .rc-view-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .rc-view-link:hover { color: var(--text-primary); }
+  .rc-view-link svg { width: 12px; height: 12px; }
+
+  /* Sources */
+  .sources-section { padding: 0 20px 20px; }
+  .sources-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .sources-label span {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .sources-view-all { font-size: 11px; color: var(--accent-purple-bright); cursor: pointer; }
+  .sources-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .source-chip {
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .source-chip:hover { border-color: var(--border-bright); background: var(--bg-hover); }
+  .sc-name { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+  .sc-meta { font-size: 10px; color: var(--text-muted); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+
+  /* ─── CHAT AREA ─── */
+  /* ─── INPUT & KICK MODE ─── */
+  .input-area {
+    padding: 16px 20px 0;
+    border-top: 1px solid var(--border);
+    background: var(--bg-panel);
+    flex-shrink: 0;
+  }
+  .input-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    transition: border-color 0.15s;
+  }
+  .input-wrapper:focus-within { border-color: rgba(124,58,237,0.4); box-shadow: 0 0 0 3px rgba(124,58,237,0.08); }
+  .input-wrapper input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 14px 8px;
+  }
+  .input-wrapper input::placeholder { color: var(--text-muted); }
+  .input-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+  .input-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+  .input-btn svg { width: 18px; height: 18px; }
+  .send-btn {
+    background: var(--accent-purple);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    transition: all 0.15s;
+    color: white;
+    margin-left: 6px;
+  }
+  .send-btn:hover { background: var(--accent-purple-bright); box-shadow: 0 0 12px rgba(124,58,237,0.4); }
+  .send-btn svg { width: 16px; height: 16px; }
+
+  /* Kick Mode Toggle - Below Input */
+  .kick-mode-area {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px 16px;
+  }
+  .kick-mode-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .kick-label { 
+    font-size: 10px; 
+    font-weight: 600; 
+    color: var(--text-muted); 
+    text-transform: uppercase; 
+    letter-spacing: 0.08em; 
+  }
+  .toggle-switch {
+    width: 40px;
+    height: 20px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+  .toggle-switch.on { 
+    background: rgba(59,130,246,0.2);
+    border-color: rgba(59,130,246,0.4);
+  }
+  .toggle-switch.on::after { 
+    left: 22px;
+    background: var(--accent-blue);
+  }
+  .toggle-status-text { 
+    font-size: 10px; 
+    font-weight: 600; 
+    color: var(--text-muted); 
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .toggle-status-text.on {
+    color: var(--accent-blue);
+  }
+  .enter-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── RIGHT PANEL ─── */
+  .right-panel {
+    width: var(--right-w);
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .viz-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .viz-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #22c55e;
+  }
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: livePulse 1.5s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .viz-tabs {
+    display: flex;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .viz-tab {
+    flex: 1;
+    text-align: center;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 7px;
+    transition: all 0.15s;
+  }
+  .viz-tab.active { background: var(--bg-hover); color: var(--text-primary); }
+  .viz-tab:hover:not(.active) { color: var(--text-secondary); }
+
+  .viz-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+  .viz-pane {
+    display: none;
+    width: 100%;
+    height: 100%;
+  }
+  .viz-pane.active { display: block; }
+
+  #graphCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Layer View */
+  .layer-view-content {
+    padding: 14px;
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .layer-view-content::-webkit-scrollbar { display: none; }
+  .lv-layer {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .lv-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .lv-title-row { display: flex; align-items: center; gap: 8px; }
+  .lv-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .lv-title { font-size: 12px; font-weight: 700; }
+  .lv-score { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); }
+  .lv-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px; }
+  .lv-bar-wrap { background: rgba(255,255,255,0.05); border-radius: 4px; height: 5px; overflow: hidden; }
+  .lv-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+  .lv-entries { margin-top: 8px; }
+  .lv-entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .lv-entry-icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+  /* Path View */
+  .path-view-content {
+    padding: 14px;
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .path-view-content::-webkit-scrollbar { display: none; }
+  .path-node {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 4px;
+    position: relative;
+  }
+  .path-node-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .path-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+  .path-line {
+    width: 2px;
+    flex: 1;
+    min-height: 20px;
+    margin: 4px 0;
+    border-left: 2px dashed rgba(255,255,255,0.08);
+  }
+  .path-node-right {
+    flex: 1;
+    padding-bottom: 16px;
+  }
+  .path-node-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .path-node-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+  .path-node-tags { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+  .path-tag {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Legend */
+  .viz-legend {
+    padding: 8px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .legend-dashed {
+    width: 18px;
+    height: 0;
+    border-top: 2px dashed var(--kick-color);
+  }
+
+  /* Kick Activity Log */
+  .kick-log-section {
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .kick-log-header {
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .kick-log-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .kick-log-link { font-size: 11px; color: var(--accent-purple-bright); cursor: pointer; }
+  .kick-log-entries {
+    padding: 0 12px 12px;
+    max-height: 130px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .kick-log-entries::-webkit-scrollbar { display: none; }
+  .kick-log-entry {
+    display: flex;
+    gap: 10px;
+    padding: 5px 0;
+    align-items: flex-start;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .kick-log-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .kick-log-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .kick-log-text { flex: 1; line-height: 1.4; }
+  .kick-log-text strong { color: var(--text-primary); font-weight: 600; }
+
+  /* ─── MODALS ─── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-bright);
+    border-radius: 16px;
+    padding: 24px;
+    width: 480px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  .modal-title { font-size: 15px; font-weight: 700; }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+  .modal-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .modal-close svg { width: 16px; height: 16px; }
+
+  /* Ingest modal */
+  .modal-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    background: var(--bg-mid);
+    border-radius: 8px;
+    padding: 4px;
+  }
+  .modal-tab {
+    flex: 1;
+    padding: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 6px;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .modal-tab.active { 
+    background: var(--bg-card); 
+    color: var(--text-primary); 
+    border-color: var(--border);
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  
+  .ingest-textarea {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 12px;
+    resize: vertical;
+    min-height: 120px;
+    outline: none;
+    margin-bottom: 10px;
+    transition: border-color 0.15s;
+  }
+  .ingest-textarea:focus { border-color: rgba(124,58,237,0.4); }
+  .ingest-input {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    margin-bottom: 14px;
+    transition: border-color 0.15s;
+  }
+  .ingest-input:focus { border-color: rgba(124,58,237,0.4); }
+  .ingest-label { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; display: block; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .btn-secondary {
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { color: var(--text-primary); }
+  .btn-primary {
+    background: var(--accent-purple);
+    border: none;
+    color: white;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary:hover { background: var(--accent-purple-bright); }
+
+  /* All Sources modal */
+  .source-list-modal { display: flex; flex-direction: column; gap: 8px; }
+  .source-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .source-list-item:hover { border-color: var(--border-bright); background: var(--bg-hover); }
+  .source-stats { margin-left: auto; text-align: right; }
+  .source-stat { font-size: 10px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+  /* Graph Explorer modal */
+  .graph-explore-canvas {
+    width: 100%;
+    height: 320px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+  .ge-entity-list { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; scrollbar-width: none; }
+  .ge-entity-list::-webkit-scrollbar { display: none; }
+  .ge-entity {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    background: var(--bg-card);
+    border-radius: 7px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .ge-entity:hover { background: var(--bg-hover); }
+  .ge-entity-name { color: var(--text-primary); }
+  .ge-entity-weight {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Analytics modal */
+  .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .analytics-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .analytics-num { font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .analytics-num.blue { color: var(--l1-color); }
+  .analytics-num.teal { color: var(--l2-color); }
+  .analytics-num.amber { color: var(--l3-color); }
+  .analytics-num.red { color: var(--kick-color); }
+  .analytics-card-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .schema-list { display: flex; flex-direction: column; gap: 6px; }
+  .schema-item { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .schema-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .schema-name { flex: 1; color: var(--text-secondary); }
+  .schema-bar-wrap { width: 80px; background: rgba(255,255,255,0.05); border-radius: 3px; height: 4px; }
+  .schema-bar { height: 100%; border-radius: 3px; }
+  .schema-pct { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); width: 30px; text-align: right; }
+
+  /* Settings modal */
+  .settings-section { margin-bottom: 18px; }
+  .settings-section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; }
+  .settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row-label { font-size: 13px; }
+  .settings-row-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .settings-toggle {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .settings-toggle.on { background: var(--accent-purple); }
+  .settings-toggle.off { background: var(--bg-hover); border: 1px solid var(--border); }
+  .settings-toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: left 0.2s;
+  }
+  .settings-toggle.on::after { left: 17px; }
+  .settings-toggle.off::after { left: 2px; }
+  .settings-slider-wrap { display: flex; align-items: center; gap: 10px; }
+  .settings-slider {
+    -webkit-appearance: none;
+    width: 120px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--bg-hover);
+    outline: none;
+  }
+  .settings-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-purple-bright);
+    cursor: pointer;
+  }
+  .settings-slider-val { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--l3-color); }
+
+  /* Notification toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-bright);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-icon svg { width: 16px; height: 16px; }
+  .toast.success .toast-icon { color: #22c55e; }
+  .toast.error .toast-icon { color: var(--kick-color); }
+
+  /* Loading dots */
+  .loading-dots { display: flex; gap: 4px; align-items: center; }
+  .loading-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-purple-bright);
+    animation: dotPulse 1.2s ease-in-out infinite;
+  }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotPulse {
+    0%,60%,100% { opacity: 0.2; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .typing-indicator.show { display: flex; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══ LEFT SIDEBAR ═══ -->
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-row">
+        <svg class="logo-rings" viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="14" r="12" stroke="rgba(96,165,250,0.15)" stroke-width="1"/>
+          <g class="ring-outer">
+            <circle cx="14" cy="14" r="12" stroke="rgba(96,165,250,0.3)" stroke-width="1" stroke-dasharray="4 6" stroke-linecap="round"/>
+          </g>
+          <g class="ring-middle">
+            <circle cx="14" cy="14" r="8" stroke="rgba(167,139,250,0.4)" stroke-width="1" stroke-dasharray="3 5" stroke-linecap="round"/>
+          </g>
+          <circle cx="14" cy="14" r="4" stroke="rgba(52,211,153,0.4)" stroke-width="1"/>
+          <circle class="ring-inner" cx="14" cy="14" r="3" fill="rgba(52,211,153,0.6)"/>
+        </svg>
+        <div class="logo-text">
+          <h1>DREAMWEAVE</h1>
+          <p>Layered Memory Intelligence Framework</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="connection-status">
+      <div class="status-dot offline" id="statusDot"></div>
+      <span class="status-text offline" id="statusText">OFFLINE — DEMO MODE</span>
+    </div>
+
+    <nav class="nav-section">
+      <div class="nav-item active" onclick="setActiveNav(this, 'chat')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Chat
+      </div>
+      <div class="nav-item" onclick="openIngestModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+        Ingest
+      </div>
+      <div class="nav-item" onclick="showMemoryLayers()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Memory Layers
+      </div>
+      <div class="nav-item" onclick="openGraphExplorer()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Graph Explorer
+      </div>
+      <div class="nav-item" onclick="openAnalytics()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </div>
+      <div class="nav-item" onclick="openSettings()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M20.49 12H22M2 12h1.51M19.07 19.07l-1.41-1.41M5.34 5.34L3.93 3.93M12 20.49V22M12 2v1.51"/></svg>
+        Settings
+      </div>
+    </nav>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sources-header">
+      <span>Ingested Sources</span>
+    </div>
+
+    <div class="source-list" id="sourceList">
+      <div class="source-item">
+        <div class="source-icon pdf">PDF</div>
+        <div class="source-info">
+          <div class="source-name">climate_change.pdf</div>
+          <div class="source-meta">PDF · 12.4 MB</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <div class="source-icon md">MD</div>
+        <div class="source-info">
+          <div class="source-name">wildfire_research.md</div>
+          <div class="source-meta">MD · 0.7 KB</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <div class="source-icon pdf">PDF</div>
+        <div class="source-info">
+          <div class="source-name">urban_planning.pdf</div>
+          <div class="source-meta">PDF · 5.1 MB</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <div class="source-icon txt">TXT</div>
+        <div class="source-info">
+          <div class="source-name">social_dynamics.txt</div>
+          <div class="source-meta">TXT · 2.3 KB</div>
+        </div>
+      </div>
+      <div class="source-item">
+        <div class="source-icon pdf">PDF</div>
+        <div class="source-info">
+          <div class="source-name">misinformation_study.pdf</div>
+          <div class="source-meta">PDF · 3.2 MB</div>
+        </div>
+      </div>
+    </div>
+    <span class="view-all-link" onclick="openAllSources()">View All Sources →</span>
+
+    <div style="flex:1"></div>
+
+    <div class="system-status-card">
+      <div class="status-header">
+        <div class="status-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div>
+          <div class="status-title">System Status</div>
+          <div class="status-online">● All Systems Operational</div>
+        </div>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Layers Active</span>
+        <span class="status-value">4 / 4</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Kick Sensitivity</span>
+        <span class="status-value amber">Medium</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Memory Utilization</span>
+        <span class="status-value">68%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:68%"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN CENTER ═══ -->
+  <main class="main">
+    <!-- Top bar with layer chips -->
+    <div class="top-bar">
+      <div class="layers-strip">
+        <div class="layer-chip l1-chip active">
+          <span class="layer-num">L1</span>
+          <div class="layer-info">
+            <span class="layer-name">Surface</span>
+            <span class="layer-sub">Vector Search</span>
+          </div>
+          <span class="layer-status idle">IDLE</span>
+        </div>
+        <div class="layer-chip l2-chip active">
+          <span class="layer-num">L2</span>
+          <div class="layer-info">
+            <span class="layer-name">Associative</span>
+            <span class="layer-sub">Graph Relations</span>
+          </div>
+          <span class="layer-status idle">IDLE</span>
+        </div>
+        <div class="layer-chip l3-chip active">
+          <span class="layer-num">L3</span>
+          <div class="layer-info">
+            <span class="layer-name">Structural</span>
+            <span class="layer-sub">Pattern Geometry</span>
+          </div>
+          <span class="layer-status idle">IDLE</span>
+        </div>
+        <div class="layer-chip l4-chip">
+          <span class="layer-num">L4</span>
+          <div class="layer-info">
+            <span class="layer-name">Archetype</span>
+            <span class="layer-sub">World Priors</span>
+          </div>
+          <span class="layer-status idle">IDLE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat area -->
+    <div class="chat-area" id="chatArea">
+      <!-- Demo conversation -->
+      <div class="user-bubble">
+        <div class="user-bubble-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+        <p>How do misinformation campaigns spread online?</p>
+      </div>
+
+      <div class="answer-block">
+        <div class="answer-header">
+          <div class="answer-header-left">
+            <div class="answer-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7" opacity="0.5"/></svg>
+              Dreamweave Answer
+            </div>
+            <div class="kick-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Kick Triggered
+            </div>
+          </div>
+          <span class="answer-time">12.45s</span>
+        </div>
+        <div class="answer-body">
+          <p class="answer-text">Misinformation campaigns spread through a combination of network effects, psychological triggers, and algorithmic amplification. They leverage social connections, emotional engagement, and echo chambers to propagate false narratives at scale.</p>
+        </div>
+
+        <div class="retrieval-summary">
+          <div class="retrieval-label">Retrieval Summary</div>
+          <div class="retrieval-grid">
+            <div class="retrieval-card rc-l1" onclick="viewChunks()">
+              <div class="rc-header">
+                <svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/></svg>
+                <span class="rc-title">L1 Surface Results</span>
+              </div>
+              <div class="rc-count">23 chunks retrieved</div>
+              <ul class="rc-bullets">
+                <li><div class="rc-score">Score: 0.910 · social_dynamics.txt</div>Social media algorithms amplify…</li>
+                <li><div class="rc-score">Score: 0.870 · network_effects.pdf</div>False information spreads faster…</li>
+                <li><div class="rc-score">Score: 0.830 · misinformation_study.pdf</div>Emotional content gets more…</li>
+              </ul>
+              <div class="rc-view-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                View Chunks
+              </div>
+            </div>
+            <div class="retrieval-card rc-l2" onclick="viewGraph()">
+              <div class="rc-header">
+                <svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><line x1="8" y1="11" x2="16" y2="6"/><line x1="8" y1="13" x2="16" y2="18"/></svg>
+                <span class="rc-title">L2 Associative Results</span>
+              </div>
+              <div class="rc-count">18 relationships found</div>
+              <ul class="rc-bullets">
+                <li>misinformation ↔ social network</li>
+                <li>echo chamber ↔ polarization</li>
+                <li>algorithm ↔ engagement</li>
+              </ul>
+              <div class="rc-view-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><line x1="8" y1="11" x2="16" y2="6"/><line x1="8" y1="13" x2="16" y2="18"/></svg>
+                View Graph
+              </div>
+            </div>
+            <div class="retrieval-card rc-kick">
+              <div class="rc-header">
+                <svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span class="rc-title">Kick Mechanism</span>
+              </div>
+              <div class="rc-count" style="color: var(--kick-color)">Conflict detected</div>
+              <div class="rc-kick-desc">Surface results conflicted with structural context about information diffusion models.</div>
+              <div class="rc-rerank" onclick="showRerank()">Re-ranking retrieval...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sources-section">
+          <div class="sources-label">
+            <span>Sources Used</span>
+            <span class="sources-view-all" onclick="openAllSources()">View All (14)</span>
+          </div>
+          <div class="sources-chips">
+            <div class="source-chip">
+              <div class="sc-name">social_dynamics.txt</div>
+              <div class="sc-meta">L1 · Chunk #12</div>
+            </div>
+            <div class="source-chip">
+              <div class="sc-name">network_effects.pdf</div>
+              <div class="sc-meta">L1 · Chunk #7</div>
+            </div>
+            <div class="source-chip">
+              <div class="sc-name">information_diffusion.md</div>
+              <div class="sc-meta">L2 · Relationship</div>
+            </div>
+            <div class="source-chip">
+              <div class="sc-name">echo_chamber_theory.pdf</div>
+              <div class="sc-meta">L3 · Pattern</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="typing-indicator" id="typingIndicator">
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+        <span>DREAMWEAVE is thinking across layers…</span>
+      </div>
+    </div>
+
+    <!-- Input area -->
+    <div class="input-area">
+      <div class="input-wrapper">
+        <button class="input-btn" title="Attach file" onclick="openIngestModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <button class="input-btn" title="Layer settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        </button>
+        <input type="text" id="chatInput" placeholder="Ask anything about your knowledge…" onkeydown="handleInputKey(event)">
+        <button class="send-btn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+      <!-- Kick Mode Toggle - Below Input -->
+      <div class="kick-mode-area">
+        <div class="kick-mode-left">
+          <span class="kick-label">KICK MODE</span>
+          <div class="toggle-switch" id="kickToggle" onclick="toggleKick()"></div>
+          <span class="toggle-status-text" id="kickStatusText">OFF</span>
+        </div>
+        <span class="enter-hint">Press Enter to send</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══ RIGHT PANEL ═══ -->
+  <aside class="right-panel">
+    <div class="viz-header">
+      <span class="viz-title">Memory Visualization</span>
+      <div class="live-badge"><div class="live-dot"></div>Live</div>
+    </div>
+
+    <div class="viz-tabs">
+      <div class="viz-tab active" onclick="switchVizTab(this,'graph')">Graph View</div>
+      <div class="viz-tab" onclick="switchVizTab(this,'layer')">Layer View</div>
+      <div class="viz-tab" onclick="switchVizTab(this,'path')">Path View</div>
+    </div>
+
+    <div class="viz-content">
+      <!-- Graph View -->
+      <div class="viz-pane active" id="pane-graph">
+        <canvas id="graphCanvas"></canvas>
+      </div>
+
+      <!-- Layer View -->
+      <div class="viz-pane" id="pane-layer">
+        <div class="layer-view-content">
+          <div class="lv-layer">
+            <div class="lv-header">
+              <div class="lv-title-row">
+                <div class="lv-dot" style="background:var(--l1-color)"></div>
+                <span class="lv-title" style="color:var(--l1-color)">L1 Surface — Vector Search</span>
+              </div>
+              <span class="lv-score">0.87</span>
+            </div>
+            <div class="lv-desc">Raw document chunks retrieved via cosine similarity. 23 chunks matched above threshold 0.72.</div>
+            <div class="lv-bar-wrap"><div class="lv-bar" style="width:87%;background:var(--l1-color)"></div></div>
+            <div class="lv-entries">
+              <div class="lv-entry">
+                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+                social_dynamics.txt — depth 0.62, access 7×
+              </div>
+              <div class="lv-entry">
+                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+                network_effects.pdf — depth 0.48, access 3×
+              </div>
+              <div class="lv-entry">
+                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+                misinformation_study.pdf — depth 0.71, access 9×
+              </div>
+            </div>
+          </div>
+          <div class="lv-layer">
+            <div class="lv-header">
+              <div class="lv-title-row">
+                <div class="lv-dot" style="background:var(--l2-color)"></div>
+                <span class="lv-title" style="color:var(--l2-color)">L2 Associative — Graph</span>
+              </div>
+              <span class="lv-score">0.74</span>
+            </div>
+            <div class="lv-desc">18 entity relationships found. Traversal depth 2. Key hub: "Social Media Platforms" (weight 14).</div>
+            <div class="lv-bar-wrap"><div class="lv-bar" style="width:74%;background:var(--l2-color)"></div></div>
+            <div class="lv-entries">
+              <div class="lv-entry">
+                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                misinformation ↔ social network (w: 8)
+              </div>
+              <div class="lv-entry">
+                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                algorithm ↔ engagement ↔ virality (w: 5)
+              </div>
+            </div>
+          </div>
+          <div class="lv-layer">
+            <div class="lv-header">
+              <div class="lv-title-row">
+                <div class="lv-dot" style="background:var(--l3-color)"></div>
+                <span class="lv-title" style="color:var(--l3-color)">L3 Structural — Pattern</span>
+              </div>
+              <span class="lv-score">0.91</span>
+            </div>
+            <div class="lv-desc">Schema matched: <strong>network_propagation</strong> (0.91 confidence). Secondary: feedback_loop (0.67).</div>
+            <div class="lv-bar-wrap"><div class="lv-bar" style="width:91%;background:var(--l3-color)"></div></div>
+            <div class="lv-entries">
+              <div class="lv-entry">
+                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                network_propagation — 91% match
+              </div>
+              <div class="lv-entry">
+                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                feedback_loop — 67% match
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Path View -->
+      <div class="viz-pane" id="pane-path">
+        <div class="path-view-content">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;font-family:'JetBrains Mono',monospace;">Query path: "misinformation campaigns spread online"</div>
+          <div class="path-node">
+            <div class="path-node-left">
+              <div class="path-circle" style="background:rgba(59,130,246,0.15);color:var(--l1-color);border:1px solid rgba(59,130,246,0.3)">L1</div>
+              <div class="path-line"></div>
+            </div>
+            <div class="path-node-right">
+              <div class="path-node-title" style="color:var(--l1-color)">Vector Retrieval</div>
+              <div class="path-node-desc">23 chunks retrieved from 5 documents. Top match: social_dynamics.txt (score 0.87). Recency decay applied to 6 documents.</div>
+              <div class="path-node-tags">
+                <span class="path-tag" style="background:rgba(59,130,246,0.1);color:var(--l1-color)">0.87 score</span>
+                <span class="path-tag" style="background:rgba(59,130,246,0.1);color:var(--l1-color)">23 chunks</span>
+              </div>
+            </div>
+          </div>
+          <div class="path-node">
+            <div class="path-node-left">
+              <div class="path-circle" style="background:rgba(20,184,166,0.15);color:var(--l2-color);border:1px solid rgba(20,184,166,0.3)">L2</div>
+              <div class="path-line"></div>
+            </div>
+            <div class="path-node-right">
+              <div class="path-node-title" style="color:var(--l2-color)">Graph Traversal</div>
+              <div class="path-node-desc">Seed entities: [misinformation, social network, algorithm]. Traversal depth 2 found 18 relationships. Hub nodes: Social Media Platforms (w:14), Algorithmic Amplification (w:11).</div>
+              <div class="path-node-tags">
+                <span class="path-tag" style="background:rgba(20,184,166,0.1);color:var(--l2-color)">18 edges</span>
+                <span class="path-tag" style="background:rgba(20,184,166,0.1);color:var(--l2-color)">depth 2</span>
+              </div>
+            </div>
+          </div>
+          <div class="path-node">
+            <div class="path-node-left">
+              <div class="path-circle" style="background:rgba(245,158,11,0.15);color:var(--l3-color);border:1px solid rgba(245,158,11,0.3)">L3</div>
+              <div class="path-line"></div>
+            </div>
+            <div class="path-node-right">
+              <div class="path-node-title" style="color:var(--l3-color)">Pattern Match</div>
+              <div class="path-node-desc">Schema network_propagation matched at 0.91 cosine similarity. Conflict detected: L1 surface context diverged from structural template by 0.48 (threshold: 0.42). Kick fired.</div>
+              <div class="path-node-tags">
+                <span class="path-tag" style="background:rgba(245,158,11,0.1);color:var(--l3-color)">0.91 match</span>
+                <span class="path-tag" style="background:rgba(239,68,68,0.1);color:var(--kick-color)">KICK: 0.48</span>
+              </div>
+            </div>
+          </div>
+          <div class="path-node">
+            <div class="path-node-left">
+              <div class="path-circle" style="background:rgba(239,68,68,0.15);color:var(--kick-color);border:1px solid rgba(239,68,68,0.3)">⚡</div>
+              <div class="path-line"></div>
+            </div>
+            <div class="path-node-right">
+              <div class="path-node-title" style="color:var(--kick-color)">Kick Re-rank</div>
+              <div class="path-node-desc">Re-weighting L1 chunks using L3 structural context. Severity: High. 8 chunks re-ranked. New top result: misinformation_study.pdf (chunk #4).</div>
+              <div class="path-node-tags">
+                <span class="path-tag" style="background:rgba(239,68,68,0.1);color:var(--kick-color)">divergence 0.48</span>
+                <span class="path-tag" style="background:rgba(239,68,68,0.1);color:var(--kick-color)">8 reranked</span>
+              </div>
+            </div>
+          </div>
+          <div class="path-node">
+            <div class="path-node-left">
+              <div class="path-circle" style="background:rgba(124,58,237,0.15);color:#a78bfa;border:1px solid rgba(124,58,237,0.3)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+            </div>
+            <div class="path-node-right">
+              <div class="path-node-title" style="color:#a78bfa">LLM Generation</div>
+              <div class="path-node-desc">Telescoped context assembled. 4,200 tokens sent to Llama 3 8B. Response generated in 12.45s on AMD MI300X.</div>
+              <div class="path-node-tags">
+                <span class="path-tag" style="background:rgba(124,58,237,0.1);color:#a78bfa">4,200 tokens</span>
+                <span class="path-tag" style="background:rgba(124,58,237,0.1);color:#a78bfa">12.45s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="viz-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--l1-color)"></div>L1 Surface</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--l2-color)"></div>L2 Associative</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--l3-color)"></div>L3 Structural</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-purple-bright)"></div>L4 Archetype</div>
+      <div class="legend-item"><div class="legend-dashed"></div>Conflict Path</div>
+    </div>
+
+    <!-- Kick Activity Log -->
+    <div class="kick-log-section">
+      <div class="kick-log-header">
+        <span class="kick-log-title">Kick Activity Log</span>
+        <span class="kick-log-link" onclick="openAllLogs()">View All Logs →</span>
+      </div>
+      <div class="kick-log-entries" id="kickLog">
+        <div class="kick-log-entry">
+          <div class="kick-log-dot" style="background:var(--kick-color)"></div>
+          <span class="kick-log-time">12:45:22</span>
+          <span class="kick-log-text"><strong>Kick triggered:</strong> Conflict between surface data and structural pattern detected</span>
+        </div>
+        <div class="kick-log-entry">
+          <div class="kick-log-dot" style="background:var(--accent-amber-bright)"></div>
+          <span class="kick-log-time">12:45:23</span>
+          <span class="kick-log-text">Analyzing contradictions across layers...</span>
+        </div>
+        <div class="kick-log-entry">
+          <div class="kick-log-dot" style="background:var(--l2-color)"></div>
+          <span class="kick-log-time">12:45:24</span>
+          <span class="kick-log-text">Re-ranking retrieval with graph context...</span>
+        </div>
+        <div class="kick-log-entry">
+          <div class="kick-log-dot" style="background:var(--accent-green-bright)"></div>
+          <span class="kick-log-time">12:45:25</span>
+          <span class="kick-log-text">New context assembled. Generating response...</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Ingest Modal -->
+<div class="modal-overlay" id="ingestModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Ingest Document</span>
+      <button class="modal-close" onclick="closeModal('ingestModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    
+    <!-- Tabs for Text and URL -->
+    <div class="modal-tabs">
+      <div class="modal-tab active" onclick="switchIngestTab('text')">Text</div>
+      <div class="modal-tab" onclick="switchIngestTab('url')">URL</div>
+    </div>
+    
+    <!-- Text Tab Content -->
+    <div class="tab-content active" id="text-tab">
+      <label class="ingest-label">Source Name</label>
+      <input class="ingest-input" id="ingestSource" placeholder="e.g. network_theory.txt" />
+      <label class="ingest-label">Document Text</label>
+      <textarea class="ingest-textarea" id="ingestText" placeholder="Paste your document content here..."></textarea>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">Or drag and drop a file onto this window. Supports PDF, MD, TXT.</div>
+    </div>
+    
+    <!-- URL Tab Content -->
+    <div class="tab-content" id="url-tab">
+      <label class="ingest-label">Source URL</label>
+      <input class="ingest-input" id="ingestUrl" placeholder="https://example.com/document.pdf" />
+      <label class="ingest-label">Source Name (Optional)</label>
+      <input class="ingest-input" id="ingestUrlName" placeholder="e.g. research_paper.pdf" />
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">Enter a URL to fetch and ingest the document content.</div>
+    </div>
+    
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('ingestModal')">Cancel</button>
+      <button class="btn-primary" onclick="doIngest()">Ingest Document</button>
+    </div>
+  </div>
+</div>
+
+<!-- All Sources Modal -->
+<div class="modal-overlay" id="allSourcesModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">All Ingested Sources</span>
+      <button class="modal-close" onclick="closeModal('allSourcesModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="source-list-modal">
+      <div class="source-list-item">
+        <div class="source-icon pdf" style="width:36px;height:36px;font-size:11px">PDF</div>
+        <div class="source-info"><div class="source-name">climate_change.pdf</div><div class="source-meta">PDF · 12.4 MB</div></div>
+        <div class="source-stats"><div class="source-stat">47 chunks</div><div class="source-stat">depth 0.72</div></div>
+      </div>
+      <div class="source-list-item">
+        <div class="source-icon md" style="width:36px;height:36px;font-size:11px">MD</div>
+        <div class="source-info"><div class="source-name">wildfire_research.md</div><div class="source-meta">MD · 0.7 KB</div></div>
+        <div class="source-stats"><div class="source-stat">3 chunks</div><div class="source-stat">depth 0.21</div></div>
+      </div>
+      <div class="source-list-item">
+        <div class="source-icon pdf" style="width:36px;height:36px;font-size:11px">PDF</div>
+        <div class="source-info"><div class="source-name">urban_planning.pdf</div><div class="source-meta">PDF · 5.1 MB</div></div>
+        <div class="source-stats"><div class="source-stat">21 chunks</div><div class="source-stat">depth 0.55</div></div>
+      </div>
+      <div class="source-list-item">
+        <div class="source-icon txt" style="width:36px;height:36px;font-size:11px">TXT</div>
+        <div class="source-info"><div class="source-name">social_dynamics.txt</div><div class="source-meta">TXT · 2.3 KB</div></div>
+        <div class="source-stats"><div class="source-stat">9 chunks</div><div class="source-stat">depth 0.62</div></div>
+      </div>
+      <div class="source-list-item">
+        <div class="source-icon pdf" style="width:36px;height:36px;font-size:11px">PDF</div>
+        <div class="source-info"><div class="source-name">misinformation_study.pdf</div><div class="source-meta">PDF · 3.2 MB</div></div>
+        <div class="source-stats"><div class="source-stat">14 chunks</div><div class="source-stat">depth 0.71</div></div>
+      </div>
+      <div class="source-list-item">
+        <div class="source-icon txt" style="width:36px;height:36px;font-size:11px">TXT</div>
+        <div class="source-info"><div class="source-name">network_effects.pdf</div><div class="source-meta">PDF · 1.8 MB</div></div>
+        <div class="source-stats"><div class="source-stat">8 chunks</div><div class="source-stat">depth 0.48</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Graph Explorer Modal -->
+<div class="modal-overlay" id="graphModal">
+  <div class="modal" style="width:560px">
+    <div class="modal-header">
+      <span class="modal-title">Graph Explorer</span>
+      <button class="modal-close" onclick="closeModal('graphModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <canvas class="graph-explore-canvas" id="exploreCanvas" width="512" height="320"></canvas>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Top entities by graph weight:</div>
+    <div class="ge-entity-list">
+      <div class="ge-entity"><span class="ge-entity-name">Social Media Platforms</span><span class="ge-entity-weight">w: 14</span></div>
+      <div class="ge-entity"><span class="ge-entity-name">Algorithmic Amplification</span><span class="ge-entity-weight">w: 11</span></div>
+      <div class="ge-entity"><span class="ge-entity-name">Information Diffusion</span><span class="ge-entity-weight">w: 9</span></div>
+      <div class="ge-entity"><span class="ge-entity-name">Echo Chamber</span><span class="ge-entity-weight">w: 8</span></div>
+      <div class="ge-entity"><span class="ge-entity-name">Psychological Triggers</span><span class="ge-entity-weight">w: 7</span></div>
+      <div class="ge-entity"><span class="ge-entity-name">Engagement</span><span class="ge-entity-weight">w: 6</span></div>
+      <div class="ge-entity"><span class="ge-entity-name">Virality</span><span class="ge-entity-weight">w: 5</span></div>
+      <div class="ge-entity"><span class="ge-entity-name">Misinformation Campaigns</span><span class="ge-entity-weight">w: 4</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Memory Layers Modal -->
+<div class="modal-overlay" id="memoryLayersModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Memory Layers Status</span>
+      <button class="modal-close" onclick="closeModal('memoryLayersModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="lv-layer">
+        <div class="lv-header"><div class="lv-title-row"><div class="lv-dot" style="background:var(--l1-color)"></div><span style="font-size:13px;font-weight:700;color:var(--l1-color)">L1 Surface — Vector Search</span></div><span style="font-size:11px;color:#22c55e">● Active</span></div>
+        <div class="lv-desc">Qdrant in-memory · all-mpnet-base-v2 · 768 dim · 102 total chunks · avg depth 0.54</div>
+        <div class="lv-bar-wrap"><div class="lv-bar" style="width:68%;background:var(--l1-color)"></div></div>
+      </div>
+      <div class="lv-layer">
+        <div class="lv-header"><div class="lv-title-row"><div class="lv-dot" style="background:var(--l2-color)"></div><span style="font-size:13px;font-weight:700;color:var(--l2-color)">L2 Associative — Knowledge Graph</span></div><span style="font-size:11px;color:#22c55e">● Active</span></div>
+        <div class="lv-desc">NetworkX DiGraph · spaCy en_core_web_lg · 84 nodes · 156 edges · top hub: Social Media Platforms</div>
+        <div class="lv-bar-wrap"><div class="lv-bar" style="width:52%;background:var(--l2-color)"></div></div>
+      </div>
+      <div class="lv-layer">
+        <div class="lv-header"><div class="lv-title-row"><div class="lv-dot" style="background:var(--l3-color)"></div><span style="font-size:13px;font-weight:700;color:var(--l3-color)">L3 Structural — Pattern Geometry</span></div><span style="font-size:11px;color:#22c55e">● Active</span></div>
+        <div class="lv-desc">8 schemas loaded · all-mpnet-base-v2 · last match: network_propagation (0.91)</div>
+        <div class="lv-bar-wrap"><div class="lv-bar" style="width:91%;background:var(--l3-color)"></div></div>
+      </div>
+      <div class="lv-layer" style="opacity:0.5">
+        <div class="lv-header"><div class="lv-title-row"><div class="lv-dot" style="background:var(--accent-purple-bright)"></div><span style="font-size:13px;font-weight:700;color:var(--accent-purple-bright)">L4 Archetype — World Priors</span></div><span style="font-size:11px;color:var(--text-muted)">Roadmap</span></div>
+        <div class="lv-desc">Not yet implemented. Will provide universal archetypes and world knowledge priors.</div>
+        <div class="lv-bar-wrap"><div class="lv-bar" style="width:0%;background:var(--accent-purple-bright)"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Analytics Modal -->
+<div class="modal-overlay" id="analyticsModal">
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <span class="modal-title">Analytics</span>
+      <button class="modal-close" onclick="closeModal('analyticsModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="analytics-grid">
+      <div class="analytics-card">
+        <div class="analytics-num blue">102</div>
+        <div class="analytics-card-label">L1 Total Chunks</div>
+      </div>
+      <div class="analytics-card">
+        <div class="analytics-num teal">84 / 156</div>
+        <div class="analytics-card-label">L2 Nodes / Edges</div>
+      </div>
+      <div class="analytics-card">
+        <div class="analytics-num amber">8</div>
+        <div class="analytics-card-label">L3 Schemas Active</div>
+      </div>
+      <div class="analytics-card">
+        <div class="analytics-num red">3</div>
+        <div class="analytics-card-label">Kick Triggers (Session)</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;">Schema Match Distribution</div>
+    <div class="schema-list">
+      <div class="schema-item"><div class="schema-dot" style="background:#3b82f6"></div><span class="schema-name">network_propagation</span><div class="schema-bar-wrap"><div class="schema-bar" style="width:91%;background:#3b82f6"></div></div><span class="schema-pct">91%</span></div>
+      <div class="schema-item"><div class="schema-dot" style="background:#f59e0b"></div><span class="schema-name">feedback_loop</span><div class="schema-bar-wrap"><div class="schema-bar" style="width:67%;background:#f59e0b"></div></div><span class="schema-pct">67%</span></div>
+      <div class="schema-item"><div class="schema-dot" style="background:#10b981"></div><span class="schema-name">optimization_search</span><div class="schema-bar-wrap"><div class="schema-bar" style="width:34%;background:#10b981"></div></div><span class="schema-pct">34%</span></div>
+      <div class="schema-item"><div class="schema-dot" style="background:#8b5cf6"></div><span class="schema-name">hierarchical_structure</span><div class="schema-bar-wrap"><div class="schema-bar" style="width:28%;background:#8b5cf6"></div></div><span class="schema-pct">28%</span></div>
+      <div class="schema-item"><div class="schema-dot" style="background:#06b6d4"></div><span class="schema-name">equilibrium_dynamics</span><div class="schema-bar-wrap"><div class="schema-bar" style="width:19%;background:#06b6d4"></div></div><span class="schema-pct">19%</span></div>
+      <div class="schema-item"><div class="schema-dot" style="background:#ec4899"></div><span class="schema-name">temporal_evolution</span><div class="schema-bar-wrap"><div class="schema-bar" style="width:12%;background:#ec4899"></div></div><span class="schema-pct">12%</span></div>
+      <div class="schema-item"><div class="schema-dot" style="background:#ef4444"></div><span class="schema-name">classification_boundary</span><div class="schema-bar-wrap"><div class="schema-bar" style="width:8%;background:#ef4444"></div></div><span class="schema-pct">8%</span></div>
+      <div class="schema-item"><div class="schema-dot" style="background:#84cc16"></div><span class="schema-name">anomaly_detection</span><div class="schema-bar-wrap"><div class="schema-bar" style="width:5%;background:#84cc16"></div></div><span class="schema-pct">5%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Settings</span>
+      <button class="modal-close" onclick="closeModal('settingsModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Kick Mechanism</div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Kick Mode</div><div class="settings-row-desc">Enable contradiction detection between L1 and L3</div></div>
+        <div class="settings-toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Kick Threshold</div><div class="settings-row-desc">Divergence score required to trigger (0.42 default)</div></div>
+        <div class="settings-slider-wrap">
+          <input type="range" class="settings-slider" min="0" max="100" value="42" oninput="document.getElementById('kickThreshVal').textContent=('0.'+this.value.toString().padStart(2,'0'))">
+          <span class="settings-slider-val" id="kickThreshVal">0.42</span>
+        </div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Layers</div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">L1 Surface</div><div class="settings-row-desc">Vector search with depth scoring</div></div>
+        <div class="settings-toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">L2 Associative</div><div class="settings-row-desc">Knowledge graph traversal</div></div>
+        <div class="settings-toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">L3 Structural</div><div class="settings-row-desc">Pattern geometry matching (8 schemas)</div></div>
+        <div class="settings-toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Retrieval</div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">L1 Top-K</div><div class="settings-row-desc">Number of chunks to retrieve</div></div>
+        <div class="settings-slider-wrap">
+          <input type="range" class="settings-slider" min="1" max="50" value="5" oninput="document.getElementById('topKVal').textContent=this.value">
+          <span class="settings-slider-val" id="topKVal">5</span>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Graph Depth</div><div class="settings-row-desc">L2 traversal depth (hops)</div></div>
+        <div class="settings-slider-wrap">
+          <input type="range" class="settings-slider" min="1" max="5" value="2" oninput="document.getElementById('depthVal').textContent=this.value">
+          <span class="settings-slider-val" id="depthVal">2</span>
+        </div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Backend</div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">API Endpoint</div><div class="settings-row-desc">DREAMWEAVE FastAPI server URL</div></div>
+        <input style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;padding:5px 8px;font-family:'JetBrains Mono',monospace;width:160px;outline:none" value="http://localhost:8000">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('settingsModal')">Cancel</button>
+      <button class="btn-primary" onclick="closeModal('settingsModal');showToast('Settings saved','success')">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- Logs Modal -->
+<div class="modal-overlay" id="logsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">All Kick Logs</span>
+      <button class="modal-close" onclick="closeModal('logsModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-secondary);line-height:1.9;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px;max-height:360px;overflow-y:auto;scrollbar-width:thin">
+      <div><span style="color:var(--text-muted)">12:45:22</span> <span style="color:var(--kick-color)">[KICK]</span> Triggered · divergence=0.48 · threshold=0.42 · severity=HIGH</div>
+      <div><span style="color:var(--text-muted)">12:45:23</span> <span style="color:var(--accent-amber-bright)">[KICK]</span> Analyzing L1↔L3 contradiction vectors...</div>
+      <div><span style="color:var(--text-muted)">12:45:24</span> <span style="color:var(--l2-color)">[ORCH]</span> Re-ranking with graph context · 8 chunks affected</div>
+      <div><span style="color:var(--text-muted)">12:45:25</span> <span style="color:var(--accent-green-bright)">[ORCH]</span> Context assembled · 4200 tokens · LLM call queued</div>
+      <div><span style="color:var(--text-muted)">12:43:11</span> <span style="color:var(--kick-color)">[KICK]</span> Triggered · divergence=0.51 · threshold=0.42 · severity=HIGH</div>
+      <div><span style="color:var(--text-muted)">12:43:12</span> <span style="color:var(--l2-color)">[ORCH]</span> Re-ranking complete · top chunk replaced</div>
+      <div><span style="color:var(--text-muted)">12:41:05</span> <span style="color:var(--text-muted)">[KICK]</span> Not fired · divergence=0.31 · below threshold</div>
+      <div><span style="color:var(--text-muted)">12:39:44</span> <span style="color:var(--kick-color)">[KICK]</span> Triggered · divergence=0.44 · threshold=0.42 · severity=MED</div>
+      <div><span style="color:var(--text-muted)">12:39:45</span> <span style="color:var(--accent-green-bright)">[ORCH]</span> Context assembled · 3800 tokens</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast">
+  <div class="toast-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// BACKEND CONFIG — points to the FastAPI server
+// ═══════════════════════════════════════════════
+const API_BASE = window.location.origin; // same origin when served by FastAPI
+// ═══════════════════════════════════════════════
+// GRAPH CANVAS — Main visualization (Graph View)
+// ═══════════════════════════════════════════════
+// GRAPH CANVAS — Main visualization (Graph View)
+// ═══════════════════════════════════════════════
+// DEMO DATA - Replace with real backend data
+let graphNodes = [
+  { id: 0, label: 'Misinformation\nCampaigns', x: 0.5, y: 0.5, r: 38, color: '#9d5cf6', glow: '#7c3aed' },
+  { id: 1, label: 'Social Media\nPlatforms', x: 0.28, y: 0.38, r: 28, color: '#14b8a6', glow: '#0d9488' },
+  { id: 2, label: 'Algorithmic\nAmplification', x: 0.5, y: 0.75, r: 24, color: '#f59e0b', glow: '#d97706' },
+  { id: 3, label: 'Information\nDiffusion', x: 0.75, y: 0.45, r: 22, color: '#3b82f6', glow: '#2563eb' },
+  { id: 4, label: 'Psychological\nTriggers', x: 0.82, y: 0.22, r: 20, color: '#14b8a6', glow: '#0d9488' },
+  { id: 5, label: 'Twitter', x: 0.13, y: 0.22, r: 12, color: '#60a5fa', glow: '#3b82f6' },
+  { id: 6, label: 'Facebook', x: 0.35, y: 0.12, r: 12, color: '#60a5fa', glow: '#3b82f6' },
+  { id: 7, label: 'TikTok', x: 0.6, y: 0.15, r: 12, color: '#60a5fa', glow: '#3b82f6' },
+  { id: 8, label: 'Reddit', x: 0.08, y: 0.55, r: 10, color: '#a78bfa', glow: '#7c3aed' },
+  { id: 9, label: 'Engagement', x: 0.18, y: 0.72, r: 13, color: '#f59e0b', glow: '#d97706' },
+  { id: 10, label: 'Ranking', x: 0.2, y: 0.88, r: 10, color: '#f59e0b', glow: '#d97706' },
+  { id: 11, label: 'Recommendation', x: 0.42, y: 0.92, r: 10, color: '#f59e0b', glow: '#d97706' },
+  { id: 12, label: 'Virality', x: 0.62, y: 0.88, r: 11, color: '#ec4899', glow: '#db2777' },
+  { id: 13, label: 'Echo\nChamber', x: 0.82, y: 0.72, r: 16, color: '#3b82f6', glow: '#2563eb' },
+  { id: 14, label: 'Network\nEffect', x: 0.75, y: 0.62, r: 13, color: '#3b82f6', glow: '#2563eb' },
+  { id: 15, label: 'Cascade\nEffect', x: 0.9, y: 0.5, r: 11, color: '#ef4444', glow: '#dc2626' },
+  { id: 16, label: 'Spread', x: 0.95, y: 0.32, r: 11, color: '#ef4444', glow: '#dc2626' },
+  { id: 17, label: 'Fear', x: 0.9, y: 0.1, r: 11, color: '#ec4899', glow: '#db2777' },
+  { id: 18, label: 'Anger', x: 1.0, y: 0.22, r: 10, color: '#ec4899', glow: '#db2777' },
+  { id: 19, label: 'Bias', x: 0.72, y: 0.08, r: 10, color: '#a78bfa', glow: '#7c3aed' },
+  { id: 20, label: 'Identity', x: 0.92, y: 0.38, r: 10, color: '#a78bfa', glow: '#7c3aed' },
+];
+
+let graphEdges = [
+  [0,1], [0,2], [0,3], [0,4],
+  [1,5], [1,6], [1,7], [1,8],
+  [1,2], [2,9], [2,10], [2,11], [2,12],
+  [3,13], [3,14], [3,15], [3,16],
+  [4,17], [4,18], [4,19], [4,20],
+  [9,12], [13,12], [14,15],
+  [0,9], [3,12], [1,13],
+];
+
+// Conflict edges (dashed red)
+let conflictEdges = [[0,13],[1,4],[2,16]];
+
+let animFrame = 0;
+let graphAnimId;
+
+function initGraph() {
+  const canvas = document.getElementById('graphCanvas');
+  if (!canvas) return;
+  const parent = canvas.parentElement;
+  canvas.width = parent.clientWidth;
+  canvas.height = parent.clientHeight;
+  
+  // Add click listener
+  canvas.addEventListener('click', handleGraphClick);
+  
+  drawGraph(canvas);
+}
+
+function handleGraphClick(e) {
+  const canvas = document.getElementById('graphCanvas');
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const W = canvas.width;
+  const H = canvas.height;
+  
+  // Check if clicked on a node
+  for (let i = 0; i < graphNodes.length; i++) {
+    const n = graphNodes[i];
+    const floatX = Math.sin(animFrame * 0.01 + n.id * 0.5) * 3;
+    const floatY = Math.cos(animFrame * 0.015 + n.id * 0.7) * 3;
+    const px = Math.max(n.r+4, Math.min(W - n.r - 4, n.x * W + floatX));
+    const py = Math.max(n.r+4, Math.min(H - n.r - 4, n.y * H + floatY));
+    
+    const dx = mx - px;
+    const dy = my - py;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    if (dist < n.r) {
+      showNodePopup(n, px, py);
+      return;
+    }
+  }
+}
+
+function showNodePopup(node, x, y) {
+  // Remove existing popup
+  const existing = document.getElementById('graphPopup');
+  if (existing) existing.remove();
+  
+  // Node descriptions (max 50 words)
+  const descriptions = {
+    'Misinformation\nCampaigns': 'Coordinated efforts spreading false information through social networks using emotional triggers and algorithmic amplification to bypass critical thinking.',
+    'Social\nMedia': 'Digital platforms enabling content creation, sharing, and social networking that amplify information spread through network effects.',
+    'Echo\nChamber': 'Environment where beliefs are amplified through repetition in closed systems, reinforcing existing views while limiting exposure to opposing perspectives.',
+    'Algorithmic\nAmplification': 'Process where recommendation algorithms increase content reach and visibility based on engagement metrics, often prioritizing emotional or controversial material.',
+    'Network\nEffects': 'Phenomenon where products or services gain value as more people use them, creating exponential growth in reach and influence.',
+    'Engagement\nMetrics': 'Measurements of user interaction including likes, shares, comments, and time spent, used to optimize content distribution algorithms.',
+    'Polarization': 'Division into sharply contrasting groups with opposing opinions, often intensified by algorithmic curation and selective exposure to information.',
+    'Filter\nBubble': 'Intellectual isolation resulting from personalized searches and algorithmic curation that limits exposure to diverse viewpoints and information.',
+    'Viral\nSpread': 'Rapid widespread dissemination of content through social sharing, driven by emotional resonance, novelty, and network effects.',
+    'Confirmation\nBias': 'Tendency to search for, interpret, and recall information confirming pre-existing beliefs while dismissing contradictory evidence.',
+    'Information\nCascade': 'Phenomenon where people observe others\' actions and make similar choices in sequence, regardless of private information.',
+    'Emotional\nTriggers': 'Content elements designed to evoke strong emotional responses like fear, anger, or joy that drive engagement and sharing.',
+    'Belief\nFormation': 'Process by which individuals develop and solidify understanding and convictions through information exposure and social influence.',
+    'Trust\nErosion': 'Gradual decline in confidence toward institutions, media, and information sources, often accelerated by misinformation exposure.',
+    'Cognitive\nDissonance': 'Mental discomfort from holding contradictory beliefs, values, or attitudes simultaneously, often resolved by rejecting conflicting information.',
+    'Homophily': 'Tendency of individuals to associate and bond with similar others, creating clustered networks that reinforce shared beliefs.',
+    'Attention\nEconomy': 'Treatment of human attention as scarce commodity in information-rich environments, driving competition for engagement and clicks.'
+  };
+  
+  const desc = descriptions[node.label] || 'A concept in the knowledge graph.';
+  
+  // Create popup
+  const popup = document.createElement('div');
+  popup.id = 'graphPopup';
+  popup.style.cssText = `
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid ${node.color};
+    border-radius: 8px;
+    padding: 12px 14px;
+    max-width: 240px;
+    color: var(--text-primary);
+    font-size: 11px;
+    line-height: 1.5;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px ${node.color}33;
+    z-index: 10000;
+    animation: slideUpRight 0.3s ease-out;
+  `;
+  
+  popup.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(139,154,181,0.2);">
+      <div style="width: 8px; height: 8px; border-radius: 50%; background: ${node.color}; box-shadow: 0 0 8px ${node.glow};"></div>
+      <div style="font-weight: 600; font-size: 12px; color: ${node.color};">${node.label.replace('\n', ' ')}</div>
+    </div>
+    <div id="popupText" style="color: var(--text-secondary);"></div>
+    <div style="margin-top: 10px; text-align: center;">
+      <button onclick="document.getElementById('graphPopup').remove()" style="background: ${node.color}22; border: 1px solid ${node.color}; color: ${node.color}; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Close</button>
+    </div>
+  `;
+  
+  // Append to the graph container (not body)
+  const graphContainer = document.querySelector('.viz-pane.active');
+  if (graphContainer) {
+    graphContainer.style.position = 'relative';
+    graphContainer.appendChild(popup);
+  } else {
+    document.body.appendChild(popup);
+  }
+  
+  // Typing effect
+  const textEl = document.getElementById('popupText');
+  let charIndex = 0;
+  
+  function typeChar() {
+    if (charIndex < desc.length) {
+      textEl.textContent = desc.substring(0, charIndex + 1);
+      charIndex++;
+      setTimeout(typeChar, 15); // Speed of typing
+    }
+  }
+  typeChar();
+  
+  // Close on outside click
+  setTimeout(() => {
+    const closeOnOutside = (e) => {
+      if (!popup.contains(e.target)) {
+        popup.remove();
+        document.removeEventListener('click', closeOnOutside);
+      }
+    };
+    document.addEventListener('click', closeOnOutside);
+  }, 100);
+}
+
+function drawGraph(canvas) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  animFrame++;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Background pulse circles
+  const pulse = 0.5 + 0.5 * Math.sin(animFrame * 0.03);
+  ctx.save();
+  ctx.globalAlpha = 0.04 + 0.02 * pulse;
+  for (let i = 1; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.arc(W*0.5, H*0.5, i * Math.min(W,H)*0.18, 0, Math.PI*2);
+    ctx.strokeStyle = '#9d5cf6';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  function nodePos(n) {
+    // Add subtle floating movement
+    const floatX = Math.sin(animFrame * 0.01 + n.id * 0.5) * 3;
+    const floatY = Math.cos(animFrame * 0.015 + n.id * 0.7) * 3;
+    const px = Math.max(n.r+4, Math.min(W - n.r - 4, n.x * W + floatX));
+    const py = Math.max(n.r+4, Math.min(H - n.r - 4, n.y * H + floatY));
+    return { x: px, y: py };
+  }
+
+  // Regular edges
+  graphEdges.forEach(([a,b]) => {
+    const pa = nodePos(graphNodes[a]);
+    const pb = nodePos(graphNodes[b]);
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.strokeStyle = '#4a5a78';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // Conflict edges (dashed)
+  conflictEdges.forEach(([a,b]) => {
+    const pa = nodePos(graphNodes[a]);
+    const pb = nodePos(graphNodes[b]);
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.setLineDash([5,5]);
+    ctx.lineDashOffset = -animFrame * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // Nodes
+  graphNodes.forEach(n => {
+    const p = nodePos(n);
+    const pulseMod = (n.id === 0) ? 1 + 0.06 * Math.sin(animFrame * 0.04) : 1;
+    const r = n.r * pulseMod;
+
+    // Glow
+    const grd = ctx.createRadialGradient(p.x, p.y, r*0.3, p.x, p.y, r*2);
+    grd.addColorStop(0, n.glow + '55');
+    grd.addColorStop(1, n.glow + '00');
+    ctx.save();
+    ctx.globalAlpha = 0.5 + 0.15 * pulse;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r*2, 0, Math.PI*2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+    ctx.restore();
+
+    // Circle
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+    ctx.fillStyle = n.color + '22';
+    ctx.fill();
+    ctx.strokeStyle = n.color;
+    ctx.lineWidth = n.id === 0 ? 2.5 : 1.5;
+    ctx.globalAlpha = 0.9;
+    ctx.stroke();
+    ctx.restore();
+
+    // Label
+    const lines = n.label.split('\n');
+    ctx.save();
+    ctx.fillStyle = '#e8edf5';
+    ctx.font = `bold ${Math.max(8, r*0.38)}px 'Space Grotesk', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.95;
+    const lineH = Math.max(9, r*0.42);
+    const startY = p.y - (lines.length - 1) * lineH / 2;
+    lines.forEach((line, i) => ctx.fillText(line, p.x, startY + i * lineH));
+    ctx.restore();
+  });
+
+  graphAnimId = requestAnimationFrame(() => drawGraph(canvas));
+}
+
+// Explore canvas (in modal)
+function drawExploreGraph() {
+  const canvas = document.getElementById('exploreCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(0,0,W,H);
+
+  const nodes2 = [
+    { label: 'Misinformation', x: W/2, y: H/2, r: 28, color: '#9d5cf6' },
+    { label: 'Social Media', x: W*0.25, y: H*0.3, r: 20, color: '#14b8a6' },
+    { label: 'Algorithm', x: W*0.5, y: H*0.15, r: 16, color: '#f59e0b' },
+    { label: 'Echo Chamber', x: W*0.75, y: H*0.3, r: 18, color: '#3b82f6' },
+    { label: 'Engagement', x: W*0.2, y: H*0.65, r: 14, color: '#f59e0b' },
+    { label: 'Virality', x: W*0.5, y: H*0.82, r: 14, color: '#ec4899' },
+    { label: 'Network Effect', x: W*0.8, y: H*0.65, r: 14, color: '#3b82f6' },
+    { label: 'Fear', x: W*0.85, y: H*0.12, r: 10, color: '#ec4899' },
+    { label: 'Bias', x: W*0.12, y: H*0.12, r: 10, color: '#a78bfa' },
+  ];
+  const edges2 = [[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[1,2],[1,8],[3,7],[4,5],[5,6]];
+
+  edges2.forEach(([a,b]) => {
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.moveTo(nodes2[a].x, nodes2[a].y);
+    ctx.lineTo(nodes2[b].x, nodes2[b].y);
+    ctx.strokeStyle = '#4a5a78';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  nodes2.forEach(n => {
+    const grd = ctx.createRadialGradient(n.x, n.y, n.r*0.2, n.x, n.y, n.r*1.8);
+    grd.addColorStop(0, n.color+'44');
+    grd.addColorStop(1, n.color+'00');
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r*1.8, 0, Math.PI*2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+    ctx.fillStyle = n.color+'22';
+    ctx.fill();
+    ctx.strokeStyle = n.color;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.9;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = '#e8edf5';
+    ctx.font = `bold ${Math.max(7, n.r*0.4)}px 'Space Grotesk', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n.label, n.x, n.y);
+    ctx.restore();
+  });
+}
+
+// ═══════════════════════════════════════════════
+// UI INTERACTIONS
+// ═══════════════════════════════════════════════
+
+function setActiveNav(el, section) {
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function switchVizTab(el, pane) {
+  document.querySelectorAll('.viz-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.viz-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-' + pane).classList.add('active');
+  if (pane === 'graph') {
+    cancelAnimationFrame(graphAnimId);
+    setTimeout(initGraph, 50);
+  }
+}
+
+let kickOn = false;
+function toggleKick() {
+  kickOn = !kickOn;
+  const tog = document.getElementById('kickToggle');
+  const txt = document.getElementById('kickStatusText');
+  if (kickOn) {
+    tog.classList.add('on');
+    txt.textContent = 'ON';
+    txt.classList.add('on');
+  } else {
+    tog.classList.remove('on');
+    txt.textContent = 'OFF';
+    txt.classList.remove('on');
+  }
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Click outside to close modal
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+function openIngestModal() { 
+  openModal('ingestModal'); 
+  // Reset to text tab by default
+  switchIngestTab('text');
+}
+
+// Switch between Text and URL tabs in ingest modal
+function switchIngestTab(tab) {
+  const tabs = document.querySelectorAll('#ingestModal .modal-tab');
+  const contents = document.querySelectorAll('#ingestModal .tab-content');
+  
+  tabs.forEach(t => t.classList.remove('active'));
+  contents.forEach(c => c.classList.remove('active'));
+  
+  if (tab === 'text') {
+    tabs[0].classList.add('active');
+    document.getElementById('text-tab').classList.add('active');
+  } else {
+    tabs[1].classList.add('active');
+    document.getElementById('url-tab').classList.add('active');
+  }
+}
+
+function openAllSources() { openModal('allSourcesModal'); }
+function openGraphExplorer() {
+  openModal('graphModal');
+  setTimeout(drawExploreGraph, 100);
+}
+function showMemoryLayers() { openModal('memoryLayersModal'); }
+function openAnalytics() { openModal('analyticsModal'); }
+function openSettings() { openModal('settingsModal'); }
+function openAllLogs() { openModal('logsModal'); }
+
+function viewChunks() {
+  showToast('Viewing L1 chunks — connect to backend to see live data', 'success');
+}
+function viewGraph() {
+  openGraphExplorer();
+}
+function showRerank() {
+  showToast('Re-ranking triggered. Connect backend to run live re-rank.', 'success');
+}
+
+async function doIngest() {
+  const textTab = document.getElementById('text-tab');
+
+  if (textTab.classList.contains('active')) {
+    // ── Text ingest ──────────────────────────────
+    const src = document.getElementById('ingestSource').value.trim();
+    const txt = document.getElementById('ingestText').value.trim();
+    if (!src || !txt) { showToast('Please fill in source name and document text', 'error'); return; }
+    closeModal('ingestModal');
+    showToast('Ingesting…', 'success');
+    try {
+      const res = await fetch(`${API_BASE}/ingest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: txt, source: src })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      addSourceToSidebar(src, txt.length);
+      addKickLog('22c55e', `Ingested: ${src} — ${data.chunks_ingested} chunks`);
+      showToast(`Ingested ${data.chunks_ingested} chunks from ${src}`, 'success');
+      document.getElementById('ingestSource').value = '';
+      document.getElementById('ingestText').value = '';
+      refreshGraph();
+    } catch(e) { showToast('Ingest failed: ' + e.message, 'error'); }
+
+  } else {
+    // ── URL ingest ───────────────────────────────
+    const url = document.getElementById('ingestUrl').value.trim();
+    const urlName = document.getElementById('ingestUrlName').value.trim();
+    if (!url) { showToast('Please enter a URL', 'error'); return; }
+    closeModal('ingestModal');
+    showToast('Fetching URL…', 'success');
+    const fileName = urlName || url.split('/').pop() || 'document';
+    try {
+      const res = await fetch(`${API_BASE}/ingest/url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, source: fileName })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      addSourceToSidebar(fileName, 0);
+      addKickLog('22c55e', `Ingested URL: ${fileName} — ${data.chunks_ingested} chunks`);
+      showToast(`Ingested ${data.chunks_ingested} chunks from URL`, 'success');
+      document.getElementById('ingestUrl').value = '';
+      document.getElementById('ingestUrlName').value = '';
+      refreshGraph();
+    } catch(e) { showToast('URL ingest failed: ' + e.message, 'error'); }
+  }
+}
+
+function addSourceToSidebar(src, byteLen) {
+  const list = document.getElementById('sourceList');
+  const ext = src.split('.').pop().toUpperCase();
+  const iconClass = ext === 'PDF' ? 'pdf' : ext === 'MD' ? 'md' : 'txt';
+  const item = document.createElement('div');
+  item.className = 'source-item';
+  item.innerHTML = `
+    <div class="source-icon ${iconClass}">${ext}</div>
+    <div class="source-info">
+      <div class="source-name">${src}</div>
+      <div class="source-meta">${ext}${byteLen ? ' · ' + (byteLen/1024).toFixed(1) + ' KB' : ''}</div>
+    </div>`;
+  list.insertBefore(item, list.firstChild);
+}
+
+function handleInputKey(e) {
+  if (e.key === 'Enter') sendMessage();
+}
+
+const mockResponses = [
+  {
+    q: '',
+    answer: 'DREAMWEAVE retrieves knowledge across three cognitive layers simultaneously — surface vectors, associative graph traversal, and structural pattern matching — then reconciles contradictions via the Kick mechanism before synthesizing a response.',
+    l1: 17, l2: 12, kicked: true, time: '8.21s',
+    schema: 'hierarchical_structure',
+    sources: ['memory_architecture.pdf', 'rag_systems.md', 'cognitive_models.txt', 'layers_theory.pdf'],
+    bullets1: [
+      { text: 'Layered retrieval improves accuracy…', score: 0.92, source: 'memory_architecture.pdf' },
+      { text: 'Vector search finds surface chunks…', score: 0.88, source: 'rag_systems.md' },
+      { text: 'Graph relations add context…', score: 0.85, source: 'cognitive_models.txt' }
+    ],
+    rels: ['layer ↔ retrieval', 'context ↔ accuracy', 'graph ↔ knowledge'],
+    patterns: [
+      { name: 'hierarchical structure', confidence: 0.89, color: '#3b82f6' },
+      { name: 'information flow', confidence: 0.76, color: '#f59e0b' }
+    ],
+    divergence: 0.48
+  },
+  {
+    q: '',
+    answer: 'Echo chambers form when algorithmic recommendation systems repeatedly serve content that confirms existing beliefs. Network homophily, engagement-optimized feeds, and limited cross-cluster edges create information bubbles that amplify polarization over time.',
+    l1: 21, l2: 15, kicked: true, time: '11.03s',
+    schema: 'feedback_loop',
+    sources: ['social_dynamics.txt', 'echo_chamber_theory.pdf', 'network_effects.pdf', 'polarization_study.md'],
+    bullets1: [
+      { text: 'Recommendation algorithms optimize…', score: 0.91, source: 'social_dynamics.txt' },
+      { text: 'Homophily drives cluster formation…', score: 0.87, source: 'echo_chamber_theory.pdf' },
+      { text: 'Engagement metrics reinforce…', score: 0.83, source: 'network_effects.pdf' }
+    ],
+    rels: ['echo chamber ↔ polarization', 'algorithm ↔ recommendation', 'bias ↔ engagement'],
+    patterns: [
+      { name: 'network propagation', confidence: 0.91, color: '#3b82f6' },
+      { name: 'feedback loop', confidence: 0.74, color: '#f59e0b' }
+    ],
+    divergence: 0.51
+  },
+];
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+
+  const chat = document.getElementById('chatArea');
+  const ub = document.createElement('div');
+  ub.className = 'user-bubble';
+  ub.innerHTML = `<div class="user-bubble-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></div><p>${q}</p>`;
+  chat.appendChild(ub);
+
+  const typing = document.getElementById('typingIndicator');
+  typing.classList.add('show');
+  chat.scrollTop = chat.scrollHeight;
+
+  const started = Date.now();
+  let layersData = null;
+
+  try {
+    const res = await fetch(`${API_BASE}/retrieve/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q, kick_enabled: kickOn, generate_answer: true, max_tokens: 600 })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    let answerText = '';
+    let finalData = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith('event: ')) { /* skip */ }
+        else if (line.startsWith('data: ')) {
+          try {
+            const evt = JSON.parse(line.slice(6));
+            if (evt.l1_surface !== undefined) layersData = evt;
+            if (evt.answer !== undefined) { answerText = evt.answer; finalData = evt; }
+          } catch(e) {}
+        }
+      }
+    }
+
+    typing.classList.remove('show');
+    const elapsed = ((Date.now() - started) / 1000).toFixed(2) + 's';
+
+    if (layersData) {
+      const mapped = buildRenderData(layersData, answerText, elapsed);
+      renderAnswer(mapped);
+    } else {
+      showToast('No results — ingest some documents first', 'error');
+    }
+  } catch(err) {
+    typing.classList.remove('show');
+    showToast('Backend error: ' + err.message, 'error');
+  }
+}
+
+function buildRenderData(ctx, answer, timeStr) {
+  const l1 = ctx.l1_surface || [];
+  const l2 = ctx.l2_associative || [];
+  const l3 = ctx.l3_structural || [];
+  const kick = ctx.kick || {};
+  const bullets1 = l1.slice(0,3).map(c => ({
+    text: (c.text||'').slice(0,80),
+    score: c.score||0,
+    source: c.source||''
+  }));
+  const rels = l2.slice(0,4).map(r => r.path || r.entity || JSON.stringify(r));
+  const colors = ['#3b82f6','#f59e0b','#10b981','#8b5cf6'];
+  const patterns = l3.slice(0,3).map((p,i) => ({
+    name: p.name||p.schema||'pattern',
+    confidence: p.confidence||p.score||0.5,
+    color: colors[i%colors.length]
+  }));
+  const allSources = [...new Set(l1.map(c=>c.source).filter(Boolean))];
+  return {
+    answer: answer || 'No answer generated.',
+    time: timeStr,
+    kicked: !!(kick.severity && kick.severity !== 'none'),
+    schema: l3[0] ? (l3[0].name||l3[0].schema||'') : '',
+    divergence: kick.divergence || 0,
+    l1: l1.length,
+    l2: l2.length,
+    bullets1,
+    rels,
+    patterns,
+    sources: allSources.length ? allSources : ['No sources yet']
+  };
+}
+
+// Render answer function - works with both mock and real backend data
+function renderAnswer(data) {
+  const chat = document.getElementById('chatArea');
+  const ab = document.createElement('div');
+  ab.className = 'answer-block';
+  
+  // Check if kick mode is enabled - only show kick if it's ON
+  const shouldShowKick = kickOn && data.kicked;
+  
+  const kickBadge = shouldShowKick ? `<div class="kick-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Kick Triggered</div>` : '';
+  
+  // Third card: L3 when kick is OFF, Kick when kick is ON
+  let thirdCard = '';
+  
+  if (kickOn) {
+    // Show Kick Mechanism card when kick is enabled
+    thirdCard = shouldShowKick ? `
+      <div class="retrieval-card rc-kick">
+        <div class="rc-header"><svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span class="rc-title">Kick Mechanism</span></div>
+        <div class="rc-count" style="color:var(--kick-color)">Conflict detected</div>
+        <div class="rc-kick-desc">Surface results conflicted with structural context about ${data.schema.replace('_', ' ')}.</div>
+        <div class="rc-rerank" style="margin-top: 8px; font-size: 11px; color: var(--kick-color); text-decoration: underline; cursor: pointer;">Re-ranking retrieval...</div>
+      </div>` : `
+      <div class="retrieval-card" style="border-color:rgba(34,197,94,0.2)">
+        <div class="rc-header"><svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span class="rc-title" style="color:#22c55e">Kick Mechanism</span></div>
+        <div class="rc-count" style="color:#22c55e">No conflict</div>
+        <div class="rc-kick-desc">L1 and L3 results are consistent. No re-ranking required.</div>
+      </div>`;
+  } else {
+    // Show L3 Pattern card when kick is disabled
+    const l3Patterns = data.patterns || [];
+    thirdCard = `
+      <div class="retrieval-card rc-l3">
+        <div class="rc-header"><svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span class="rc-title">L3 Structural Results</span></div>
+        <div class="rc-count">${l3Patterns.length} patterns matched</div>
+        <div style="margin-top: 8px;">${l3Patterns.map(p=>`
+          <div class="rc-pattern-item">
+            <div class="rc-pattern-dot" style="background: ${p.color}; box-shadow: 0 0 6px ${p.color}"></div>
+            <div class="rc-pattern-name">${p.name.replace(/_/g, ' ')}</div>
+            <div class="rc-pattern-confidence">${Math.round(p.confidence * 100)}%</div>
+          </div>
+        `).join('')}</div>
+        <div class="rc-view-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>View Patterns</div>
+      </div>`;
+  }
+
+  ab.innerHTML = `
+    <div class="answer-header">
+      <div class="answer-header-left">
+        <div class="answer-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7" opacity="0.5"/></svg>Dreamweave Answer</div>
+        ${kickBadge}
+      </div>
+      <span class="answer-time">${data.time}</span>
+    </div>
+    <div class="answer-body"><p class="answer-text" id="typingAnswer"></p></div>
+    <div class="retrieval-summary">
+      <div class="retrieval-label">Retrieval Summary</div>
+      <div class="retrieval-grid">
+        <div class="retrieval-card rc-l1" onclick="viewChunks()">
+          <div class="rc-header"><svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/></svg><span class="rc-title">L1 Surface Results</span></div>
+          <div class="rc-count">${data.l1} chunks retrieved</div>
+          <ul class="rc-bullets">${data.bullets1.map(b=>`<li><div class="rc-score">Score: ${b.score.toFixed(3)} · ${b.source}</div>${b.text}</li>`).join('')}</ul>
+          <div class="rc-view-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>View Chunks</div>
+        </div>
+        <div class="retrieval-card rc-l2" onclick="openGraphExplorer()">
+          <div class="rc-header"><svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><line x1="8" y1="11" x2="16" y2="6"/><line x1="8" y1="13" x2="16" y2="18"/></svg><span class="rc-title">L2 Associative Results</span></div>
+          <div class="rc-count">${data.l2} relationships found</div>
+          <ul class="rc-bullets">${data.rels.map(r=>`<li>${r}</li>`).join('')}</ul>
+          <div class="rc-view-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><line x1="8" y1="11" x2="16" y2="6"/><line x1="8" y1="13" x2="16" y2="18"/></svg>View Graph</div>
+        </div>
+        ${thirdCard}
+      </div>
+    </div>
+    <div class="sources-section">
+      <div class="sources-label"><span>Sources Used</span><span class="sources-view-all" onclick="openAllSources()">View All</span></div>
+      <div class="sources-chips">${data.sources.map((s,i)=>{const layers=['L1 · Chunk #'+Math.ceil(Math.random()*20),'L1 · Chunk #'+Math.ceil(Math.random()*10),'L2 · Relationship','L3 · Pattern'];return`<div class="source-chip"><div class="sc-name">${s}</div><div class="sc-meta">${layers[i%4]}</div></div>`}).join('')}</div>
+    </div>`;
+  chat.appendChild(ab);
+
+  // Typing effect for answer
+  const answerEl = document.getElementById('typingAnswer');
+  const fullText = data.answer;
+  let charIndex = 0;
+  
+  function typeChar() {
+    if (charIndex < fullText.length) {
+      answerEl.textContent = fullText.substring(0, charIndex + 1);
+      charIndex++;
+      chat.scrollTop = chat.scrollHeight;
+      setTimeout(typeChar, 20); // Adjust speed here (lower = faster)
+    }
+  }
+  typeChar();
+
+  // Only log kick activity if kick mode is enabled
+  if (shouldShowKick) {
+    addKickLog('ef4444', '<strong>Kick triggered:</strong> Divergence detected in ' + data.schema + ' pattern');
+    addKickLog('f59e0b', 'Re-ranking retrieval with graph context...');
+    addKickLog('22c55e', 'Response generated in ' + data.time);
+  } else if (kickOn) {
+    addKickLog('22c55e', 'Query processed — no conflict detected');
+  } else {
+    addKickLog('8b9ab5', 'Query processed — kick mode disabled');
+  }
+
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addKickLog(color, text) {
+  const log = document.getElementById('kickLog');
+  const now = new Date();
+  const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+  const el = document.createElement('div');
+  el.className = 'kick-log-entry';
+  el.innerHTML = `<div class="kick-log-dot" style="background:#${color}"></div><span class="kick-log-time">${ts}</span><span class="kick-log-text">${text}</span>`;
+  log.insertBefore(el, log.firstChild);
+  if (log.children.length > 12) log.removeChild(log.lastChild);
+}
+
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  const m = document.getElementById('toastMsg');
+  t.className = 'toast ' + type;
+  m.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+window.addEventListener('load', () => {
+  initGraph();
+  checkHealth();
+  loadSources();
+});
+
+window.addEventListener('resize', () => {
+  cancelAnimationFrame(graphAnimId);
+  initGraph();
+});
+
+async function checkHealth() {
+  try {
+    const res = await fetch(`${API_BASE}/health`);
+    if (res.ok) {
+      const data = await res.json();
+      setConnectionStatus(true);
+      showToast('DREAMWEAVE backend connected ✓', 'success');
+      // Update system status card stats
+      const l1Stats = data.l1_stats || {};
+      const gStats = data.graph_stats || {};
+      const chunksEl = document.getElementById('statChunks');
+      const nodesEl = document.getElementById('statNodes');
+      if (chunksEl) chunksEl.textContent = l1Stats.total_chunks || 0;
+      if (nodesEl) nodesEl.textContent = gStats.nodes || 0;
+    } else { setConnectionStatus(false); }
+  } catch(e) {
+    setConnectionStatus(false);
+    showToast('Backend offline — check server', 'error');
+  }
+}
+
+async function loadSources() {
+  try {
+    const res = await fetch(`${API_BASE}/sources`);
+    if (!res.ok) return;
+    const sources = await res.json();
+    if (!sources || !sources.length) return;
+    const list = document.getElementById('sourceList');
+    list.innerHTML = '';
+    sources.slice(0, 8).forEach(s => {
+      const name = s.source || s.name || 'Unknown';
+      const ext = name.split('.').pop().toUpperCase();
+      const iconClass = ext === 'PDF' ? 'pdf' : ext === 'MD' ? 'md' : 'txt';
+      const item = document.createElement('div');
+      item.className = 'source-item';
+      item.innerHTML = `
+        <div class="source-icon ${iconClass}">${ext}</div>
+        <div class="source-info">
+          <div class="source-name">${name}</div>
+          <div class="source-meta">${ext} · ${s.chunk_count || 0} chunks</div>
+        </div>`;
+      list.appendChild(item);
+    });
+  } catch(e) { /* sources unavailable */ }
+}
+
+async function refreshGraph() {
+  try {
+    const res = await fetch(`${API_BASE}/graph`);
+    if (!res.ok) return;
+    const g = await res.json();
+    if (!g || !g.nodes || !g.nodes.length) return;
+    const colors = ['#9d5cf6','#14b8a6','#f59e0b','#3b82f6','#ec4899','#ef4444','#60a5fa','#a78bfa'];
+    const W = 1, H = 1;
+    const nodes = g.nodes.slice(0, 25).map((n, i) => ({
+      id: i,
+      label: n.entity || n.id || `Node ${i}`,
+      x: 0.1 + Math.random() * 0.8,
+      y: 0.1 + Math.random() * 0.8,
+      r: Math.max(10, Math.min(36, (n.weight || 1) * 4)),
+      color: colors[i % colors.length],
+      glow: colors[i % colors.length]
+    }));
+    const idxMap = {};
+    nodes.forEach((n, i) => idxMap[n.label] = i);
+    const edges = (g.edges || []).slice(0, 40).map(e => {
+      const a = idxMap[e.source] ?? 0;
+      const b = idxMap[e.target] ?? 1;
+      return [a, b];
+    }).filter(([a,b]) => a !== b);
+    updateGraphData(nodes, edges, []);
+    loadSources();
+  } catch(e) { /* graph refresh failed */ }
+}
+
+// Function to update connection status
+function setConnectionStatus(isOnline) {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  
+  if (isOnline) {
+    dot.className = 'status-dot online';
+    text.className = 'status-text online';
+    text.textContent = 'ONLINE';
+  } else {
+    dot.className = 'status-dot offline';
+    text.className = 'status-text offline';
+    text.textContent = 'OFFLINE — DEMO MODE';
+  }
+}
+
+// Example: To set online status when backend connects, call:
+// setConnectionStatus(true);
+// To set offline status:
+// setConnectionStatus(false);
+
+// ═══════════════════════════════════════════════
+// UPDATE GRAPH WITH REAL DATA
+// ═══════════════════════════════════════════════
+/**
+ * Update the graph visualization with real backend data
+ * @param {Array} nodes - Array of node objects with structure:
+ *   { id, label, x, y, r, color, glow }
+ *   - id: unique identifier
+ *   - label: display text (use \n for line breaks)
+ *   - x, y: position (0-1 range, relative to canvas)
+ *   - r: radius in pixels
+ *   - color: node fill color (hex)
+ *   - glow: node glow color (hex)
+ * @param {Array} edges - Array of edge pairs: [[nodeId1, nodeId2], ...]
+ * @param {Array} conflicts - Array of conflict edge pairs (optional)
+ */
+function updateGraphData(nodes, edges, conflicts = []) {
+  graphNodes = nodes;
+  graphEdges = edges;
+  conflictEdges = conflicts;
+  
+  // Redraw the graph with new data
+  const canvas = document.getElementById('graphCanvas');
+  if (canvas) {
+    initGraph();
+  }
+  
+  console.log('Graph updated with real data:', {
+    nodes: nodes.length,
+    edges: edges.length,
+    conflicts: conflicts.length
+  });
+}
+
+/**
+ * Example usage when connecting to backend:
+ * 
+ * // Fetch data from your backend
+ * fetch('/api/graph-data')
+ *   .then(res => res.json())
+ *   .then(data => {
+ *     updateGraphData(data.nodes, data.edges, data.conflicts);
+ *   });
+ * 
+ * // Or with custom data:
+ * const myNodes = [
+ *   { id: 0, label: 'Concept A', x: 0.3, y: 0.4, r: 30, color: '#3b82f6', glow: '#2563eb' },
+ *   { id: 1, label: 'Concept B', x: 0.7, y: 0.6, r: 25, color: '#14b8a6', glow: '#0d9488' },
+ * ];
+ * const myEdges = [[0, 1]];
+ * updateGraphData(myNodes, myEdges);
+ */
+
+// ═══════════════════════════════════════════════
+// DRAG AND DROP FILE UPLOAD
+// ═══════════════════════════════════════════════
+const dropZone = document.body;
+
+// Prevent default drag behaviors
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+  dropZone.addEventListener(eventName, preventDefaults, false);
+  document.body.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+// Highlight drop zone when item is dragged over it
+['dragenter', 'dragover'].forEach(eventName => {
+  dropZone.addEventListener(eventName, highlight, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+  dropZone.addEventListener(eventName, unhighlight, false);
+});
+
+function highlight(e) {
+  dropZone.classList.add('drag-highlight');
+}
+
+function unhighlight(e) {
+  dropZone.classList.remove('drag-highlight');
+}
+
+// Handle dropped files
+dropZone.addEventListener('drop', handleDrop, false);
+
+function handleDrop(e) {
+  const dt = e.dataTransfer;
+  const files = dt.files;
+  
+  if (files.length > 0) {
+    handleFiles(files);
+  }
+}
+
+async function handleFiles(files) {
+  for (const file of files) {
+    showToast(`Uploading ${file.name}…`, 'success');
+    try {
+      const formData = new FormData();
+      formData.append('file', file, file.name);
+      const res = await fetch(`${API_BASE}/ingest/file`, {
+        method: 'POST',
+        body: formData
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      addSourceToSidebar(file.name, file.size);
+      addKickLog('22c55e', `File uploaded: ${file.name} — ${data.chunks_ingested} chunks`);
+      showToast(`Ingested ${data.chunks_ingested} chunks from ${file.name}`, 'success');
+      refreshGraph();
+    } catch(e) {
+      showToast(`Upload failed (${file.name}): ` + e.message, 'error');
+    }
+  }
+}
+
+// Add visual feedback CSS for drag and drop
+const style = document.createElement('style');
+style.textContent = `
+  .drag-highlight {
+    position: relative;
+  }
+  .drag-highlight::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(124,58,237,0.1);
+    border: 3px dashed rgba(124,58,237,0.5);
+    pointer-events: none;
+    z-index: 9999;
+    animation: dragPulse 0.5s ease-in-out infinite;
+  }
+  @keyframes dragPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  @keyframes slideUp {
+    from { 
+      opacity: 0; 
+      transform: translateY(10px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+  @keyframes popupFade {
+    from { 
+      opacity: 0; 
+      transform: translate(-50%, -50%) scale(0.95); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translate(-50%, -50%) scale(1); 
+    }
+  }
+  @keyframes slideUpRight {
+    from { 
+      opacity: 0; 
+      transform: translateY(20px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+`;
+document.head.appendChild(style);
+
+
+</script>
+</body>
+</html>
