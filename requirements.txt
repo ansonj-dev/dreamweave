@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+qdrant-client
+sentence-transformers
+spacy
+networkx
+httpx
+numpy
+scikit-learn
+python-dotenv
+pydantic
+python-multipart
+pypdf
