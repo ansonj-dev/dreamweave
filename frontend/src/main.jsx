@@ -158,6 +158,7 @@ function App() {
   const [graph, setGraph] = useState(demoGraph);
   const [query, setQuery] = useState(demoResult.query);
   const [isLoading, setIsLoading] = useState(false);
+  const [llmOnline, setLlmOnline] = useState(false);
   const [kickEnabled, setKickEnabled] = useState(true);
   const [ingestOpen, setIngestOpen] = useState(false);
   const [logs, setLogs] = useState([
@@ -176,8 +177,15 @@ function App() {
       setGraph(graphData.nodes?.length ? graphData : demoGraph);
       const schemaData = await request("/schemas");
       setSchemas(schemaData?.length ? schemaData : demoSchemas);
+      try {
+        const llmHealth = await request("/health/llm");
+        setLlmOnline(llmHealth.status === "reachable");
+      } catch {
+        setLlmOnline(false);
+      }
     } catch {
       setApiOnline(false);
+      setLlmOnline(false);
       setHealth(null);
       setGraph(demoGraph);
       setSchemas(demoSchemas);
@@ -205,12 +213,15 @@ function App() {
         method: "POST",
         body: JSON.stringify({
           query: cleanQuery,
-          generate_answer: true,
+          generate_answer: llmOnline,
           max_tokens: 700,
           kick_enabled: kickEnabled
         })
       });
-      setResult(data);
+      setResult({
+        ...data,
+        answer: data.answer && data.answer !== "Answer generation disabled" ? data.answer : buildClientRetrievalAnswer(data)
+      });
       addLog(data.kick?.message || "Retrieval completed", Boolean(data.kick?.fired));
       const graphData = await request("/graph");
       setGraph(graphData.nodes?.length ? graphData : graph);
@@ -256,7 +267,7 @@ function App() {
         onUpload={() => setIngestOpen(true)}
       />
       <main className="workspace">
-        <TopBar kickEnabled={kickEnabled} setKickEnabled={setKickEnabled} apiOnline={apiOnline} />
+      <TopBar kickEnabled={kickEnabled} setKickEnabled={setKickEnabled} apiOnline={apiOnline} llmOnline={llmOnline} />
         <LayerStrip result={result} schemas={schemas} />
         {activeView === "chat" && (
           <ChatView
@@ -342,7 +353,7 @@ function Sidebar({ activeView, setActiveView, sources, apiOnline, memoryChunks, 
   );
 }
 
-function TopBar({ kickEnabled, setKickEnabled, apiOnline }) {
+function TopBar({ kickEnabled, setKickEnabled, apiOnline, llmOnline }) {
   return (
     <header className="topbar">
       <div>
@@ -353,6 +364,10 @@ function TopBar({ kickEnabled, setKickEnabled, apiOnline }) {
         <span className={classNames("connection", apiOnline ? "online" : "offline")}>
           <CircleDot size={14} />
           {apiOnline ? "API connected" : "Demo mode"}
+        </span>
+        <span className={classNames("connection", llmOnline ? "online" : "offline")}>
+          <Bot size={14} />
+          {llmOnline ? "LLM online" : "Retrieval mode"}
         </span>
         <label className="switch-label">
           Kick Mode
@@ -821,6 +836,27 @@ function sourceType(source) {
   if (lower.endsWith(".md")) return "MD";
   if (lower.endsWith(".pdf")) return "PDF";
   return "TXT";
+}
+
+function buildClientRetrievalAnswer(data) {
+  const topFact = data.l1_surface?.[0]?.text || "No surface memory matched this query yet.";
+  const topSchema = data.l3_structural?.[0];
+  const schemaLine = topSchema
+    ? `L3 identified ${topSchema.name} as the strongest structural pattern. ${topSchema.description}`
+    : "L3 did not find a structural schema above threshold.";
+  const paths = data.l2_associative?.slice(0, 3).map((item) => item.path || item.entity).join("; ") || "No L2 graph paths were found.";
+  const kick = data.kick || {};
+  return [
+    "DREAMWEAVE is running in retrieval mode because the local LLM is not reachable yet.",
+    "",
+    schemaLine,
+    "",
+    `Top L1 surface fact: ${topFact}`,
+    "",
+    `L2 associative paths: ${paths}`,
+    "",
+    `Kick status: ${kick.message || "Kick was not evaluated"} Severity: ${kick.severity || "none"}, divergence: ${kick.divergence ?? 0}.`
+  ].join("\n");
 }
 
 createRoot(document.getElementById("root")).render(<App />);

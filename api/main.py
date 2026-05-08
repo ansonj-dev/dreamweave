@@ -150,7 +150,7 @@ async def retrieve(req: QueryRequest) -> RetrieveResponse:
         context = dw.retrieve(req.query, kick_enabled=req.kick_enabled)
         if req.generate_answer:
             prompt = dw.build_llm_context(context)
-            answer = await call_llm(prompt, req.query, req.max_tokens)
+            answer = await call_llm(prompt, req.query, req.max_tokens, context)
         latency_ms = int((time.perf_counter() - started) * 1000)
         return RetrieveResponse(answer=answer, latency_ms=latency_ms, **context)
     except HTTPException:
@@ -173,7 +173,7 @@ async def retrieve_stream(req: QueryRequest) -> StreamingResponse:
             if req.generate_answer:
                 yield sse("status", {"message": "Calling local LLM"})
                 prompt = dw.build_llm_context(context)
-                answer = await call_llm(prompt, req.query, req.max_tokens)
+                answer = await call_llm(prompt, req.query, req.max_tokens, context)
             latency_ms = int((time.perf_counter() - started) * 1000)
             yield sse("answer", {"answer": answer, "latency_ms": latency_ms})
             yield sse("done", {"status": "complete"})
@@ -183,7 +183,7 @@ async def retrieve_stream(req: QueryRequest) -> StreamingResponse:
     return StreamingResponse(events(), media_type="text/event-stream")
 
 
-async def call_llm(context: str, query: str, max_tokens: int) -> str:
+async def call_llm(context: str, query: str, max_tokens: int, retrieval_context: dict[str, Any]) -> str:
     payload = {
         "model": LLM_MODEL,
         "messages": [
@@ -194,13 +194,13 @@ async def call_llm(context: str, query: str, max_tokens: int) -> str:
         "temperature": 0.3,
     }
     try:
-        async with httpx.AsyncClient(timeout=90.0) as client:
+        async with httpx.AsyncClient(timeout=12.0) as client:
             response = await client.post(LLM_URL, json=payload)
             response.raise_for_status()
             data = response.json()
             return str(data["choices"][0]["message"]["content"])
     except Exception:
-        return "LLM unavailable - showing retrieval context only"
+        return build_retrieval_answer(query, retrieval_context)
 
 
 @app.get("/health")
@@ -319,6 +319,29 @@ def extract_uploaded_text(filename: str, content: bytes) -> str:
 
 def sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=True)}\n\n"
+
+
+def build_retrieval_answer(query: str, context: dict[str, Any]) -> str:
+    l1 = context.get("l1_surface", [])
+    l2 = context.get("l2_associative", [])
+    l3 = context.get("l3_structural", [])
+    kick = context.get("kick", {})
+
+    top_fact = l1[0].get("text", "") if l1 else "No surface memory matched this query yet."
+    top_schema = l3[0] if l3 else {}
+    schema_name = top_schema.get("name", "no structural schema")
+    schema_description = top_schema.get("description", "No L3 structural pattern cleared the confidence threshold.")
+    paths = "; ".join(item.get("path", item.get("entity", "")) for item in l2[:3]) or "No L2 graph paths were found."
+
+    return (
+        "Local LLM is not reachable yet, so DREAMWEAVE is showing a retrieval-grounded answer.\n\n"
+        f"Query: {query}\n\n"
+        f"L3 identified the strongest structure as {schema_name}: {schema_description}\n\n"
+        f"Top L1 surface fact: {top_fact[:700]}\n\n"
+        f"L2 associative paths: {paths}\n\n"
+        f"Kick status: {kick.get('message', 'Kick was not evaluated')} "
+        f"(severity: {kick.get('severity', 'none')}, divergence: {kick.get('divergence', 0.0)})."
+    )
 
 
 @app.get("/", response_model=None)
