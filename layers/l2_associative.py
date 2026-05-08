@@ -32,6 +32,13 @@ class L2AssociativeEngine:
                 for ent in doc.ents
                 if len(ent.text.strip()) >= 3
             ]
+            seen = {entity.lower() for entity, _ in entities}
+            for chunk in doc.noun_chunks:
+                phrase = " ".join(token.lemma_.lower() for token in chunk if not token.is_stop and not token.is_punct).strip()
+                if len(phrase) < 3 or len(phrase.split()) > 4 or phrase in seen:
+                    continue
+                entities.append((phrase, "CONCEPT"))
+                seen.add(phrase)
 
             for entity, label in entities:
                 if self.graph.has_node(entity):

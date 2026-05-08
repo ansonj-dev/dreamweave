@@ -1,626 +1,470 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Activity,
   AlertTriangle,
   BarChart3,
-  Bot,
   BrainCircuit,
   CheckCircle2,
-  ChevronRight,
+  ChevronDown,
   CircleDot,
   Database,
   FileText,
-  Gauge,
   GitBranch,
+  KeyRound,
   Layers,
-  MessageSquare,
+  Loader2,
+  Lock,
   Network,
-  Paperclip,
-  Play,
-  Radar,
+  RefreshCw,
   Search,
   Send,
   Settings,
   Shield,
-  Sparkles,
   Upload,
   Zap
 } from "lucide-react";
 import "./styles.css";
 
-const API_BASE = import.meta.env.VITE_DREAMWEAVE_API || "http://localhost:8000";
-
-const demoSources = [
-  { name: "network_theory.txt", type: "TXT", size: "4.8 KB", layer: "L1" },
-  { name: "climate_systems.txt", type: "TXT", size: "5.2 KB", layer: "L1" },
-  { name: "ml_optimization.txt", type: "TXT", size: "4.5 KB", layer: "L1" },
-  { name: "urban_planning.txt", type: "TXT", size: "4.9 KB", layer: "L2" },
-  { name: "epidemiology.txt", type: "TXT", size: "5.0 KB", layer: "L3" }
-];
-
-const demoSchemas = [
-  { name: "network_propagation", confidence: 0.86, color: "#3B82F6", description: "Threshold-based spread through connected nodes in a network" },
-  { name: "feedback_loop", confidence: 0.62, color: "#F59E0B", description: "Self-reinforcing or self-correcting cyclic system dynamics" },
-  { name: "temporal_evolution", confidence: 0.49, color: "#EC4899", description: "State change over time with dependence on historical states" }
-];
-
-const demoResult = {
-  query: "How do misinformation campaigns spread online?",
-  answer:
-    "Misinformation campaigns spread through a layered combination of network propagation, emotional triggering, and ranking amplification. L1 finds the surface evidence: repeated exposure, echo chambers, hubs, and algorithmic boosts. L2 connects those facts into a graph of platforms, psychological triggers, engagement loops, and diffusion paths. L3 recognizes the governing structure as network propagation: nodes activate when exposure crosses a threshold, then cascades move through bridges and high-degree hubs.\n\nThe Kick mechanism flags a medium divergence because some retrieved surface chunks emphasize psychological manipulation while the strongest structural pattern expects graph diffusion. In practice, DREAMWEAVE should answer with both: the campaign spreads across the graph, but the reason the graph activates is emotional salience and identity reinforcement.",
-  l1_surface: [
-    { text: "Social media algorithms amplify emotionally engaging narratives across connected communities.", score: 0.84, source: "social_dynamics.txt", depth_score: 0.3, access_count: 7 },
-    { text: "False information spreads faster when repeated by trusted hubs inside echo chambers.", score: 0.81, source: "network_effects.pdf", depth_score: 0.2, access_count: 5 },
-    { text: "Recommendation systems create long-range shortcuts where a message leaps between communities.", score: 0.77, source: "information_diffusion.md", depth_score: 0.1, access_count: 3 }
-  ],
-  l2_associative: [
-    { entity: "Social Media Platforms", path: "misinformation -> social network -> echo chamber", weight: 9, node_type: "CONCEPT", distance: 1 },
-    { entity: "Algorithmic Amplification", path: "algorithm -> engagement -> recommendation", weight: 8, node_type: "CONCEPT", distance: 1 },
-    { entity: "Psychological Triggers", path: "identity -> anger -> sharing", weight: 7, node_type: "CONCEPT", distance: 2 },
-    { entity: "Information Diffusion", path: "hub -> bridge -> cascade", weight: 6, node_type: "CONCEPT", distance: 2 }
-  ],
-  l3_structural: demoSchemas,
-  kick: {
-    fired: true,
-    divergence: 0.47,
-    severity: "medium",
-    message: "Moderate conflict - surface facts partially diverge from structural expectations",
-    threshold: 0.42
-  },
-  graph_stats: { nodes: 23, edges: 31, top_entities: [] },
-  latency_ms: 12450
+const API_BASE = import.meta.env.VITE_DREAMWEAVE_API || window.location.origin;
+const DEFAULT_RESULT = {
+  query: "",
+  answer: "",
+  l1_surface: [],
+  l2_associative: [],
+  l3_structural: [],
+  kick: { fired: false, divergence: 0, severity: "none", message: "No query has been run", threshold: 0.42 },
+  kick_reranked_surface: [],
+  graph_stats: { nodes: 0, edges: 0, top_entities: [] },
+  latency_ms: 0
 };
+const EMPTY_GRAPH = { nodes: [], edges: [] };
 
-const demoGraph = {
-  nodes: [
-    { id: "Misinformation Campaigns", weight: 18, type: "L4", cluster: "center" },
-    { id: "Social Media Platforms", weight: 11, type: "L1", cluster: "surface" },
-    { id: "Twitter", weight: 4, type: "L1", cluster: "surface" },
-    { id: "Facebook", weight: 4, type: "L1", cluster: "surface" },
-    { id: "TikTok", weight: 4, type: "L1", cluster: "surface" },
-    { id: "Reddit", weight: 4, type: "L1", cluster: "surface" },
-    { id: "Psychological Triggers", weight: 10, type: "L2", cluster: "assoc" },
-    { id: "Fear", weight: 4, type: "L2", cluster: "assoc" },
-    { id: "Anger", weight: 4, type: "L2", cluster: "assoc" },
-    { id: "Bias", weight: 4, type: "L2", cluster: "assoc" },
-    { id: "Identity", weight: 4, type: "L2", cluster: "assoc" },
-    { id: "Algorithmic Amplification", weight: 10, type: "L3", cluster: "struct" },
-    { id: "Engagement", weight: 4, type: "L3", cluster: "struct" },
-    { id: "Ranking", weight: 4, type: "L3", cluster: "struct" },
-    { id: "Recommendation", weight: 4, type: "L3", cluster: "struct" },
-    { id: "Virality", weight: 4, type: "L3", cluster: "struct" },
-    { id: "Information Diffusion", weight: 10, type: "L4", cluster: "diffusion" },
-    { id: "Spread", weight: 4, type: "L4", cluster: "diffusion" },
-    { id: "Cascade Effect", weight: 4, type: "L4", cluster: "diffusion" },
-    { id: "Echo Chamber", weight: 4, type: "L4", cluster: "diffusion" },
-    { id: "Network Effect", weight: 4, type: "L4", cluster: "diffusion" }
-  ],
-  edges: [
-    ["Misinformation Campaigns", "Social Media Platforms"],
-    ["Social Media Platforms", "Twitter"],
-    ["Social Media Platforms", "Facebook"],
-    ["Social Media Platforms", "TikTok"],
-    ["Social Media Platforms", "Reddit"],
-    ["Misinformation Campaigns", "Psychological Triggers"],
-    ["Psychological Triggers", "Fear"],
-    ["Psychological Triggers", "Anger"],
-    ["Psychological Triggers", "Bias"],
-    ["Psychological Triggers", "Identity"],
-    ["Misinformation Campaigns", "Algorithmic Amplification"],
-    ["Algorithmic Amplification", "Engagement"],
-    ["Algorithmic Amplification", "Ranking"],
-    ["Algorithmic Amplification", "Recommendation"],
-    ["Algorithmic Amplification", "Virality"],
-    ["Misinformation Campaigns", "Information Diffusion"],
-    ["Information Diffusion", "Spread"],
-    ["Information Diffusion", "Cascade Effect"],
-    ["Information Diffusion", "Echo Chamber"],
-    ["Information Diffusion", "Network Effect"],
-    ["Social Media Platforms", "Algorithmic Amplification"],
-    ["Psychological Triggers", "Information Diffusion"],
-    ["Algorithmic Amplification", "Information Diffusion"]
-  ].map(([source, target]) => ({ source, target, weight: 1 }))
-};
-
-function classNames(...parts) {
-  return parts.filter(Boolean).join(" ");
-}
-
-function formatLatency(ms) {
-  if (!ms) return "demo";
-  return `${(ms / 1000).toFixed(2)}s`;
-}
-
-function truncate(text, length = 96) {
-  const value = String(text || "");
-  return value.length > length ? `${value.slice(0, length - 3)}...` : value;
-}
-
-async function request(path, options = {}) {
+async function api(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options
   });
   if (!response.ok) {
-    throw new Error(`${path} failed with ${response.status}`);
+    const text = await response.text();
+    throw new Error(`${path} failed (${response.status}): ${text.slice(0, 240)}`);
   }
   return response.json();
 }
 
 function App() {
-  const [activeView, setActiveView] = useState("chat");
-  const [apiOnline, setApiOnline] = useState(false);
+  const [authenticated, setAuthenticated] = useState(() => sessionStorage.getItem("dreamweave-auth") === "true");
+  const [activeSection, setActiveSection] = useState("query");
+  const [selectedLayer, setSelectedLayer] = useState("overview");
   const [health, setHealth] = useState(null);
-  const [sources, setSources] = useState(demoSources);
-  const [result, setResult] = useState(demoResult);
-  const [schemas, setSchemas] = useState(demoSchemas);
-  const [graph, setGraph] = useState(demoGraph);
-  const [query, setQuery] = useState(demoResult.query);
-  const [isLoading, setIsLoading] = useState(false);
-  const [llmOnline, setLlmOnline] = useState(false);
+  const [sources, setSources] = useState([]);
+  const [schemas, setSchemas] = useState([]);
+  const [graph, setGraph] = useState(EMPTY_GRAPH);
+  const [result, setResult] = useState(DEFAULT_RESULT);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [booting, setBooting] = useState(true);
+  const [error, setError] = useState("");
+  const [logs, setLogs] = useState([]);
   const [kickEnabled, setKickEnabled] = useState(true);
-  const [ingestOpen, setIngestOpen] = useState(false);
-  const [logs, setLogs] = useState([
-    { time: "12:45:22", text: "Kick triggered: Conflict between surface data and structural pattern detected", fire: true },
-    { time: "12:45:23", text: "Analyzing contradictions across layers...", fire: false },
-    { time: "12:45:24", text: "Re-ranking retrieval with graph context...", fire: false },
-    { time: "12:45:25", text: "New context assembled. Generating response...", fire: false }
-  ]);
+  const [llmOnline, setLlmOnline] = useState(false);
 
-  const refreshHealth = useCallback(async () => {
+  const addLog = useCallback((message, level = "info") => {
+    setLogs((current) => [{ time: new Date().toLocaleTimeString([], { hour12: false }), message, level }, ...current].slice(0, 25));
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setBooting(true);
+    setError("");
     try {
-      const data = await request("/health");
-      setApiOnline(true);
-      setHealth(data);
-      const graphData = await request("/graph");
-      setGraph(graphData.nodes?.length ? graphData : demoGraph);
-      const schemaData = await request("/schemas");
-      setSchemas(schemaData?.length ? schemaData : demoSchemas);
+      const [healthData, sourceData, schemaData, graphData] = await Promise.all([
+        api("/health"),
+        api("/sources"),
+        api("/schemas"),
+        api("/graph")
+      ]);
+      setHealth(healthData);
+      setSources(Array.isArray(sourceData) ? sourceData : []);
+      setSchemas(Array.isArray(schemaData) ? schemaData : []);
+      setGraph(normalizeGraph(graphData));
       try {
-        const llmHealth = await request("/health/llm");
-        setLlmOnline(llmHealth.status === "reachable");
+        const llm = await api("/health/llm");
+        setLlmOnline(llm.status === "reachable");
       } catch {
         setLlmOnline(false);
       }
-    } catch {
-      setApiOnline(false);
-      setLlmOnline(false);
-      setHealth(null);
-      setGraph(demoGraph);
-      setSchemas(demoSchemas);
+      addLog("Runtime state refreshed", "ok");
+    } catch (err) {
+      setError(err.message);
+      addLog(err.message, "error");
+    } finally {
+      setBooting(false);
     }
-  }, []);
+  }, [addLog]);
 
   useEffect(() => {
-    refreshHealth();
-  }, [refreshHealth]);
+    if (authenticated) refresh();
+  }, [authenticated, refresh]);
 
-  const addLog = useCallback((text, fire = false) => {
-    const now = new Date().toLocaleTimeString([], { hour12: false });
-    setLogs((current) => [{ time: now, text, fire }, ...current].slice(0, 10));
-  }, []);
-
-  const runQuery = async (event) => {
+  async function runQuery(event) {
     event?.preventDefault();
-    const cleanQuery = query.trim();
-    if (!cleanQuery) return;
-    setIsLoading(true);
-    addLog("Layered retrieval started across L1, L2, and L3", false);
+    const clean = query.trim();
+    if (!clean) return;
+    setLoading(true);
+    setError("");
+    addLog(`Query submitted: ${clean}`, "info");
     try {
-      if (!apiOnline) throw new Error("offline");
-      const data = await request("/retrieve", {
+      const data = await api("/retrieve", {
         method: "POST",
-        body: JSON.stringify({
-          query: cleanQuery,
-          generate_answer: llmOnline,
-          max_tokens: 700,
-          kick_enabled: kickEnabled
-        })
+        body: JSON.stringify({ query: clean, generate_answer: llmOnline, max_tokens: 700, kick_enabled: kickEnabled })
       });
-      setResult({
+      const nextResult = {
+        ...DEFAULT_RESULT,
         ...data,
-        answer: data.answer && data.answer !== "Answer generation disabled" ? data.answer : buildClientRetrievalAnswer(data)
-      });
-      addLog(data.kick?.message || "Retrieval completed", Boolean(data.kick?.fired));
-      const graphData = await request("/graph");
-      setGraph(graphData.nodes?.length ? graphData : graph);
-    } catch {
-      setResult({ ...demoResult, query: cleanQuery });
-      setGraph(demoGraph);
-      addLog("Offline demo retrieval rendered because backend is unavailable", true);
+        answer: data.answer && data.answer !== "Answer generation disabled" ? data.answer : buildRetrievalAnswer(data)
+      };
+      setResult(nextResult);
+      addLog(data.kick?.message || "Layered retrieval completed", data.kick?.fired ? "warn" : "ok");
+      const graphData = await api("/graph");
+      setGraph(normalizeGraph(graphData));
+      const sourceData = await api("/sources");
+      setSources(Array.isArray(sourceData) ? sourceData : []);
+    } catch (err) {
+      setError(err.message);
+      addLog(err.message, "error");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }
 
-  const ingest = async ({ source, text }) => {
-    if (!text.trim()) {
-      return "Paste text before ingesting.";
-    }
+  async function ingestText({ source, text }) {
+    if (!source.trim() || !text.trim()) return "Source name and text are required.";
     try {
-      const data = await request("/ingest", {
-        method: "POST",
-        body: JSON.stringify({ source, text })
-      });
-      setSources((current) => [{ name: source, type: sourceType(source), size: "Live source", layer: "L1" }, ...current]);
-      await refreshHealth();
-      addLog(`Ingested ${data.chunks_ingested} chunks from ${source}`, false);
-      return `Ingested ${data.chunks_ingested} chunks. Graph now has ${data.graph_nodes} nodes and ${data.graph_edges} edges.`;
-    } catch {
-      return "Backend unavailable. Start the API on the GPU instance, then ingest again.";
+      const data = await api("/ingest", { method: "POST", body: JSON.stringify({ source, text }) });
+      addLog(`Ingested ${data.chunks_ingested} chunks from ${source}`, "ok");
+      await refresh();
+      return `Ingested ${data.chunks_ingested} chunks. Graph: ${data.graph_nodes} nodes, ${data.graph_edges} edges.`;
+    } catch (err) {
+      setError(err.message);
+      addLog(err.message, "error");
+      return err.message;
     }
-  };
+  }
 
-  const memoryChunks = health?.l1_stats?.total_chunks ?? result.l1_surface.length;
-  const graphNodes = health?.graph_stats?.nodes ?? result.graph_stats.nodes;
-  const graphEdges = health?.graph_stats?.edges ?? result.graph_stats.edges;
+  async function ingestFile(file) {
+    if (!file) return "Choose a file first.";
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const response = await fetch(`${API_BASE}/ingest/file`, { method: "POST", body: form });
+      if (!response.ok) throw new Error(await response.text());
+      const data = await response.json();
+      addLog(`Uploaded ${file.name}: ${data.chunks_ingested} chunks`, "ok");
+      await refresh();
+      return `Uploaded ${file.name}. ${data.chunks_ingested} chunks ingested.`;
+    } catch (err) {
+      setError(err.message);
+      addLog(err.message, "error");
+      return err.message;
+    }
+  }
+
+  const anomalies = useMemo(() => detectAnomalies({ health, sources, graph, result, error, llmOnline }), [health, sources, graph, result, error, llmOnline]);
+  const stats = health?.runtime || {};
+
+  if (!authenticated) {
+    return <LoginScreen onLogin={() => { sessionStorage.setItem("dreamweave-auth", "true"); setAuthenticated(true); }} />;
+  }
 
   return (
-    <div className="shell">
-      <Sidebar
-        activeView={activeView}
-        setActiveView={setActiveView}
-        sources={sources}
-        apiOnline={apiOnline}
-        memoryChunks={memoryChunks}
-        onUpload={() => setIngestOpen(true)}
-      />
+    <div className="app-shell">
+      <aside className="sidebar">
+        <Brand />
+        <nav className="nav">
+          {[
+            ["query", Search, "Query Console"],
+            ["ingest", Upload, "Ingest"],
+            ["memory", Layers, "Memory Layers"],
+            ["graph", Network, "Graph Explorer"],
+            ["ops", BarChart3, "Ops & Anomalies"],
+            ["settings", Settings, "Settings"]
+          ].map(([id, Icon, label]) => (
+            <button className={activeSection === id ? "active" : ""} key={id} onClick={() => setActiveSection(id)} type="button">
+              <Icon size={18} />
+              {label}
+            </button>
+          ))}
+        </nav>
+        <RuntimeCard health={health} llmOnline={llmOnline} />
+        <SourceList sources={sources} />
+      </aside>
+
       <main className="workspace">
-      <TopBar kickEnabled={kickEnabled} setKickEnabled={setKickEnabled} apiOnline={apiOnline} llmOnline={llmOnline} />
-        <LayerStrip result={result} schemas={schemas} />
-        {activeView === "chat" && (
-          <ChatView
-            result={result}
-            query={query}
-            setQuery={setQuery}
-            runQuery={runQuery}
-            isLoading={isLoading}
-            kickEnabled={kickEnabled}
-            graphNodes={graphNodes}
-            graphEdges={graphEdges}
-          />
-        )}
-        {activeView === "ingest" && <IngestView onIngest={ingest} sources={sources} />}
-        {activeView === "layers" && <LayersView result={result} schemas={schemas} />}
-        {activeView === "graph" && <GraphExplorer graph={graph} result={result} />}
-        {activeView === "analytics" && <AnalyticsView result={result} memoryChunks={memoryChunks} graphNodes={graphNodes} graphEdges={graphEdges} logs={logs} />}
-        {activeView === "settings" && <SettingsView apiBase={API_BASE} kickEnabled={kickEnabled} setKickEnabled={setKickEnabled} apiOnline={apiOnline} />}
+        <TopBar
+          booting={booting}
+          error={error}
+          llmOnline={llmOnline}
+          kickEnabled={kickEnabled}
+          setKickEnabled={setKickEnabled}
+          refresh={refresh}
+        />
+        <LayerHeader selectedLayer={selectedLayer} setSelectedLayer={setSelectedLayer} result={result} stats={stats} graph={graph} />
+        {activeSection === "query" && <QueryConsole result={result} query={query} setQuery={setQuery} runQuery={runQuery} loading={loading} />}
+        {activeSection === "ingest" && <IngestConsole ingestText={ingestText} ingestFile={ingestFile} />}
+        {activeSection === "memory" && <MemoryLayers selectedLayer={selectedLayer} setSelectedLayer={setSelectedLayer} result={result} schemas={schemas} stats={stats} sources={sources} graph={graph} />}
+        {activeSection === "graph" && <GraphExplorer graph={graph} result={result} />}
+        {activeSection === "ops" && <OpsConsole anomalies={anomalies} logs={logs} health={health} result={result} />}
+        {activeSection === "settings" && <SettingsConsole apiBase={API_BASE} health={health} refresh={refresh} />}
       </main>
-      <RightRail graph={graph} logs={logs} result={result} />
-      <IngestModal open={ingestOpen} onClose={() => setIngestOpen(false)} onIngest={ingest} />
+
+      <aside className="right-rail">
+        <MemoryVisualization graph={graph} />
+        <AnomalyPanel anomalies={anomalies} logs={logs} />
+      </aside>
     </div>
   );
 }
 
-function Sidebar({ activeView, setActiveView, sources, apiOnline, memoryChunks, onUpload }) {
-  const nav = [
-    ["chat", MessageSquare, "Chat"],
-    ["ingest", Upload, "Ingest"],
-    ["layers", Layers, "Memory Layers"],
-    ["graph", GitBranch, "Graph Explorer"],
-    ["analytics", BarChart3, "Analytics"],
-    ["settings", Settings, "Settings"]
-  ];
+function LoginScreen({ onLogin }) {
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const expected = import.meta.env.VITE_DREAMWEAVE_ACCESS_CODE || "";
+  function submit(event) {
+    event.preventDefault();
+    if (expected && code !== expected) {
+      setError("Invalid access code.");
+      return;
+    }
+    onLogin();
+  }
   return (
-    <aside className="sidebar">
-      <div className="brand">
-        <div className="brand-mark"><span /></div>
-        <div>
-          <h1>DREAMWEAVE</h1>
-          <p>Layered Memory Intelligence Framework</p>
-        </div>
+    <section className="login-screen">
+      <div className="login-card">
+        <Brand />
+        <h2>Secure Memory Console</h2>
+        <p>Connect to the live DREAMWEAVE backend. The console only renders runtime data returned by your API.</p>
+        <form onSubmit={submit}>
+          <label>
+            Access Code
+            <span><KeyRound size={16} /><input value={code} onChange={(event) => setCode(event.target.value)} placeholder={expected ? "Enter access code" : "No code configured"} type="password" /></span>
+          </label>
+          {error && <em>{error}</em>}
+          <button type="submit"><Lock size={16} /> Enter Console</button>
+        </form>
       </div>
-      <nav className="nav">
-        {nav.map(([id, Icon, label]) => (
-          <button key={id} className={classNames(activeView === id && "active")} onClick={() => setActiveView(id)} type="button">
-            <Icon size={18} />
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
-      <div className="sidebar-section">
-        <div className="section-title">
-          <span>Ingested Sources</span>
-          <button type="button" onClick={onUpload}>+ Upload</button>
-        </div>
-        <div className="source-list">
-          {sources.slice(0, 7).map((source) => (
-            <div className="source-row" key={`${source.name}-${source.size}`}>
-              <span className={classNames("filetype", source.type.toLowerCase())}>{source.type}</span>
-              <span>
-                <strong>{source.name}</strong>
-                <small>{source.type} · {source.size}</small>
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="status-card">
-        <div className="status-head">
-          <Shield size={18} />
-          <span>
-            System Status
-            <small className={apiOnline ? "ok" : "bad"}>{apiOnline ? "All systems operational" : "Offline demo mode"}</small>
-          </span>
-        </div>
-        <Metric label="Layers Active" value="3 / 3" />
-        <Metric label="Kick Sensitivity" value="0.42" warm />
-        <Metric label="Memory Chunks" value={String(memoryChunks)} />
-        <div className="util"><span style={{ width: `${Math.min(100, Math.max(18, Number(memoryChunks) * 7 || 68))}%` }} /></div>
-      </div>
-    </aside>
+    </section>
   );
 }
 
-function TopBar({ kickEnabled, setKickEnabled, apiOnline, llmOnline }) {
+function Brand() {
   return (
-    <header className="topbar">
-      <div>
-        <p className="eyebrow">Active Workspace</p>
-        <h2>Layered Cognitive Memory Console</h2>
-      </div>
-      <div className="top-actions">
-        <span className={classNames("connection", apiOnline ? "online" : "offline")}>
-          <CircleDot size={14} />
-          {apiOnline ? "API connected" : "Demo mode"}
-        </span>
-        <span className={classNames("connection", llmOnline ? "online" : "offline")}>
-          <Bot size={14} />
-          {llmOnline ? "LLM online" : "Retrieval mode"}
-        </span>
-        <label className="switch-label">
-          Kick Mode
-          <button className={classNames("switch", !kickEnabled && "off")} type="button" onClick={() => setKickEnabled(!kickEnabled)} aria-label="Toggle Kick mode" />
-        </label>
-        <div className="avatar" />
-      </div>
-    </header>
+    <div className="brand">
+      <div className="brand-mark"><span /></div>
+      <div><h1>DREAMWEAVE</h1><p>Layered Memory Intelligence</p></div>
+    </div>
   );
 }
 
-function LayerStrip({ result, schemas }) {
-  const layers = [
-    { id: "L1", name: "Surface", sub: "Vector Search", color: "blue", value: `${result.l1_surface.length} hits` },
-    { id: "L2", name: "Associative", sub: "Graph Relations", color: "cyan", value: `${result.l2_associative.length} paths` },
-    { id: "L3", name: "Structural", sub: "Pattern Geometry", color: "gold", value: schemas[0]?.name || "schemas" },
-    { id: "L4", name: "Archetype", sub: "Roadmap Layer", color: "violet", value: "future" }
-  ];
+function RuntimeCard({ health, llmOnline }) {
+  const runtime = health?.runtime;
+  const chunks = health?.l1_stats?.total_chunks ?? 0;
+  const nodes = health?.graph_stats?.nodes ?? 0;
   return (
-    <section className="layer-strip">
-      {layers.map((layer) => (
-        <article className={classNames("layer-card", layer.color)} key={layer.id}>
-          <span>{layer.id}</span>
-          <div>
-            <strong>{layer.name}</strong>
-            <small>{layer.sub}</small>
-          </div>
-          <em>{layer.value}</em>
-        </article>
+    <section className="runtime-card">
+      <div className="runtime-head"><Shield size={18} /><span>Runtime Status</span></div>
+      <Metric label="API" value={health ? "ready" : "offline"} tone={health ? "ok" : "bad"} />
+      <Metric label="LLM" value={llmOnline ? "online" : "retrieval mode"} tone={llmOnline ? "ok" : "warn"} />
+      <Metric label="Chunks" value={chunks} />
+      <Metric label="Graph Nodes" value={nodes} />
+      <Metric label="Embedding" value={runtime?.embedding_model || "unknown"} compact />
+    </section>
+  );
+}
+
+function SourceList({ sources }) {
+  return (
+    <section className="source-panel">
+      <div className="section-title"><span>Sources</span><strong>{sources.length}</strong></div>
+      {sources.length === 0 ? <EmptyState text="No sources ingested yet." /> : sources.slice(0, 10).map((source) => (
+        <div className="source-row" key={source.source}>
+          <FileText size={16} />
+          <span><strong>{source.source}</strong><small>{source.chunks || 0} chunks · {source.kind || "text"}</small></span>
+        </div>
       ))}
     </section>
   );
 }
 
-function ChatView({ result, query, setQuery, runQuery, isLoading, graphNodes, graphEdges }) {
-  const kickFired = Boolean(result.kick?.fired);
+function TopBar({ booting, error, llmOnline, kickEnabled, setKickEnabled, refresh }) {
   return (
-    <section className="chat-grid">
-      <div className="question-card">
-        <span>?</span>
-        <h2>{result.query}</h2>
+    <header className="topbar">
+      <div>
+        <p className="eyebrow">Production Console</p>
+        <h2>Live Cognitive Memory Runtime</h2>
       </div>
-      <article className="answer-panel">
-        <div className="panel-title">
-          <span><Sparkles size={16} /> DREAMWEAVE Answer</span>
-          <div className="panel-actions">
-            {kickFired && <strong className="kick-pill"><AlertTriangle size={14} /> Kick Triggered</strong>}
-            <small>{formatLatency(result.latency_ms)}</small>
-          </div>
-        </div>
-        <p>{result.answer}</p>
-        <div className="summary-divider" />
-        <div className="summary-title">Retrieval Summary</div>
-        <div className="retrieval-cards">
-          <RetrievalCard type="l1" title="L1 Surface Results" count={`${result.l1_surface.length} chunks retrieved`} icon={<Database size={20} />} items={result.l1_surface.slice(0, 3).map((item) => truncate(item.text, 78))} footer="View Chunks" />
-          <RetrievalCard type="l2" title="L2 Associative Results" count={`${result.l2_associative.length} relationships found`} icon={<Network size={20} />} items={result.l2_associative.slice(0, 4).map((item) => item.path || item.entity)} footer="View Graph" />
-          <KickCard kick={result.kick} schemas={result.l3_structural} />
-        </div>
-        <SourceChips result={result} />
-      </article>
-      <StatsRibbon graphNodes={graphNodes} graphEdges={graphEdges} result={result} />
-      <form className="query-box" onSubmit={runQuery}>
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ask anything about your knowledge..." />
-        <div className="query-tools"><Paperclip size={18} /><Radar size={18} /></div>
-        <button type="submit" disabled={isLoading}><Send size={18} />{isLoading ? "Thinking" : "Send"}</button>
-      </form>
-    </section>
+      <div className="top-actions">
+        <StatusPill tone={error ? "bad" : booting ? "warn" : "ok"} icon={booting ? Loader2 : CircleDot} text={error ? "Attention" : booting ? "Syncing" : "API Ready"} spin={booting} />
+        <StatusPill tone={llmOnline ? "ok" : "warn"} icon={BrainCircuit} text={llmOnline ? "LLM Online" : "Retrieval Mode"} />
+        <label className="switch-label">Kick <button className={kickEnabled ? "switch" : "switch off"} type="button" onClick={() => setKickEnabled(!kickEnabled)} /></label>
+        <button className="icon-button" onClick={refresh} type="button"><RefreshCw size={16} /></button>
+      </div>
+    </header>
   );
 }
 
-function RetrievalCard({ type, title, count, icon, items, footer }) {
-  return (
-    <article className={classNames("retrieval-card", type)}>
-      <div className="card-heading">
-        <span>{icon}</span>
-        <div><strong>{title}</strong><small>{count}</small></div>
-      </div>
-      <ul>
-        {items.length ? items.map((item) => <li key={item}>{item}</li>) : <li>No results yet</li>}
-      </ul>
-      <button type="button">{footer} <ChevronRight size={14} /></button>
-    </article>
-  );
-}
-
-function KickCard({ kick, schemas }) {
-  const schema = schemas?.[0];
-  return (
-    <article className="retrieval-card kick">
-      <div className="card-heading">
-        <span><AlertTriangle size={20} /></span>
-        <div><strong>Kick Mechanism</strong><small>{kick?.fired ? "Conflict detected" : "No conflict detected"}</small></div>
-      </div>
-      <p>{kick?.message || "Kick has not evaluated yet."}</p>
-      {schema && <div className="schema-meter"><span>{schema.name}</span><i><b style={{ width: `${Math.round((schema.confidence || 0) * 100)}%` }} /></i></div>}
-      <em>{kick?.fired ? "Re-ranking retrieval..." : `Divergence ${kick?.divergence ?? 0}`}</em>
-    </article>
-  );
-}
-
-function SourceChips({ result }) {
-  const sources = [...new Set(result.l1_surface.map((item) => item.source).filter(Boolean))];
-  const chips = [
-    ...sources.slice(0, 3).map((source, idx) => ({ name: source, meta: `L1 · Chunk #${idx + 1}` })),
-    ...(result.l3_structural[0] ? [{ name: `${result.l3_structural[0].name}.pattern`, meta: "L3 · Pattern" }] : [])
+function LayerHeader({ selectedLayer, setSelectedLayer, result, stats, graph }) {
+  const layers = [
+    { id: "overview", label: "Overview", value: `${stats.l1_stats?.total_chunks ?? 0} chunks` },
+    { id: "l1", label: "L1 Surface", value: `${result.l1_surface.length} hits` },
+    { id: "l2", label: "L2 Associative", value: `${graph.nodes.length} nodes` },
+    { id: "l3", label: "L3 Structural", value: result.l3_structural[0]?.name || "no match" },
+    { id: "kick", label: "Kick", value: result.kick?.severity || "none" }
   ];
   return (
-    <section className="source-chips">
-      <div><strong>Sources Used</strong><button type="button">View All ({chips.length})</button></div>
-      <div className="chips">
-        {chips.map((chip) => <span key={`${chip.name}-${chip.meta}`}><strong>{chip.name}</strong><small>{chip.meta}</small></span>)}
+    <section className="layer-header">
+      <label>
+        Layer Focus
+        <span><select value={selectedLayer} onChange={(event) => setSelectedLayer(event.target.value)}>{layers.map((layer) => <option value={layer.id} key={layer.id}>{layer.label}</option>)}</select><ChevronDown size={16} /></span>
+      </label>
+      <div className="layer-metrics">
+        {layers.slice(1).map((layer) => <div key={layer.id}><strong>{layer.label}</strong><small>{layer.value}</small></div>)}
       </div>
     </section>
   );
 }
 
-function StatsRibbon({ graphNodes, graphEdges, result }) {
+function QueryConsole({ result, query, setQuery, runQuery, loading }) {
   return (
-    <div className="stats-ribbon">
-      <MetricBox icon={<BrainCircuit />} label="Graph Nodes" value={graphNodes} />
-      <MetricBox icon={<GitBranch />} label="Graph Edges" value={graphEdges} />
-      <MetricBox icon={<Gauge />} label="Kick Divergence" value={result.kick?.divergence ?? 0} />
-      <MetricBox icon={<Zap />} label="Top Schema" value={result.l3_structural[0]?.name || "none"} />
-    </div>
+    <section className="query-console">
+      <form className="query-bar" onSubmit={runQuery}>
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ask the live memory system..." />
+        <button disabled={loading} type="submit">{loading ? <Loader2 className="spin" size={18} /> : <Send size={18} />} Run</button>
+      </form>
+      <article className="answer-panel">
+        <div className="panel-title"><span><Zap size={16} /> Answer</span><small>{result.latency_ms ? `${(result.latency_ms / 1000).toFixed(2)}s` : "not run"}</small></div>
+        {loading ? <Skeleton /> : result.answer ? <p>{result.answer}</p> : <EmptyState text="Run a query to retrieve live layered context." />}
+      </article>
+      <div className="retrieval-grid">
+        <ResultCard title="L1 Surface" tone="blue" count={`${result.l1_surface.length} chunks`} items={result.l1_surface.map((item) => `${item.source}: ${truncate(item.text, 110)}`)} />
+        <ResultCard title="L2 Associative" tone="cyan" count={`${result.l2_associative.length} paths`} items={result.l2_associative.map((item) => item.path || item.entity)} />
+        <ResultCard title="L3 + Kick" tone={result.kick?.fired ? "pink" : "gold"} count={result.l3_structural[0]?.name || "no schema"} items={[...(result.l3_structural.map((schema) => `${schema.name} · ${Math.round((schema.confidence || 0) * 100)}%`)), result.kick?.message].filter(Boolean)} />
+      </div>
+    </section>
   );
 }
 
-function IngestView({ onIngest, sources }) {
-  const [source, setSource] = useState("manual_notes.txt");
+function IngestConsole({ ingestText, ingestFile }) {
+  const [source, setSource] = useState("");
   const [text, setText] = useState("");
-  const [status, setStatus] = useState("Ready to ingest into L1 Surface and L2 Associative memory.");
-  const submit = async () => setStatus(await onIngest({ source, text }));
-  return (
-    <section className="page-panel ingest-page">
-      <div className="page-head">
-        <div><p className="eyebrow">Memory Intake</p><h2>Ingest Documents</h2></div>
-        <CheckCircle2 size={24} />
-      </div>
-      <div className="ingest-layout">
-        <div className="ingest-form">
-          <label>Source Name<input value={source} onChange={(event) => setSource(event.target.value)} /></label>
-          <label>Document Text<textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Paste research text, notes, markdown, paper excerpts, or structured documentation..." /></label>
-          <button className="primary" type="button" onClick={submit}><Upload size={18} /> Ingest into DREAMWEAVE</button>
-          <p>{status}</p>
-        </div>
-        <div className="recent-sources">
-          <h3>Current Source Queue</h3>
-          {sources.map((item) => <div key={`${item.name}-${item.size}`}><FileText size={16} /><span>{item.name}</span><small>{item.layer}</small></div>)}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function LayersView({ result, schemas }) {
+  const [file, setFile] = useState(null);
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submitText() {
+    setBusy(true);
+    setStatus(await ingestText({ source, text }));
+    setBusy(false);
+  }
+  async function submitFile() {
+    setBusy(true);
+    setStatus(await ingestFile(file));
+    setBusy(false);
+  }
   return (
     <section className="page-panel">
-      <div className="page-head"><div><p className="eyebrow">Layer Inspector</p><h2>Memory Layers</h2></div><Layers size={24} /></div>
-      <div className="layer-inspector">
-        <LayerDetail title="L1 Surface" accent="blue" body="Raw chunk retrieval, Qdrant cosine search, depth scoring, access counts, and source-level traceability." items={result.l1_surface.map((item) => `${item.source}: ${truncate(item.text, 90)}`)} />
-        <LayerDetail title="L2 Associative" accent="cyan" body="spaCy entity extraction, co-occurrence edges, directed NetworkX traversal, and graph neighborhoods." items={result.l2_associative.map((item) => item.path || item.entity)} />
-        <LayerDetail title="L3 Structural" accent="gold" body="Eight hardcoded cognitive schemas matched by embedding geometry against the user query." items={schemas.map((schema) => `${schema.name}: ${schema.description}`)} />
-        <LayerDetail title="Kick Mechanism" accent="pink" body="Divergence detector between L1 surface facts and L3 structural expectations." items={[result.kick.message, `threshold=${result.kick.threshold}`, `divergence=${result.kick.divergence}`]} />
+      <div className="page-head"><div><p className="eyebrow">Memory Intake</p><h2>Ingest Real Knowledge</h2></div><Upload size={24} /></div>
+      <div className="ingest-grid">
+        <div className="form-card">
+          <label>Source Name<input value={source} onChange={(event) => setSource(event.target.value)} placeholder="research_notes.txt" /></label>
+          <label>Text<textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Paste source text here..." /></label>
+          <button className="primary" disabled={busy} onClick={submitText} type="button">{busy ? <Loader2 className="spin" size={16} /> : <Upload size={16} />} Ingest Text</button>
+        </div>
+        <div className="form-card">
+          <label>Upload File<input onChange={(event) => setFile(event.target.files?.[0] || null)} type="file" /></label>
+          <p className="hint">Supports text-like files and PDFs through the backend `/ingest/file` endpoint.</p>
+          <button className="primary" disabled={busy || !file} onClick={submitFile} type="button">{busy ? <Loader2 className="spin" size={16} /> : <FileText size={16} />} Ingest File</button>
+          {status && <div className="status-message">{status}</div>}
+        </div>
       </div>
     </section>
   );
 }
 
-function LayerDetail({ title, accent, body, items }) {
+function MemoryLayers({ selectedLayer, setSelectedLayer, result, schemas, stats, sources, graph }) {
+  const views = {
+    overview: <Overview stats={stats} sources={sources} graph={graph} />,
+    l1: <LayerDetail title="L1 Surface" text="Vector retrieval over stored chunks." items={result.l1_surface.map((item) => `${item.score}: ${item.source} · ${truncate(item.text, 160)}`)} />,
+    l2: <LayerDetail title="L2 Associative" text="Entity and concept graph built from ingested text." items={result.l2_associative.map((item) => item.path || item.entity)} />,
+    l3: <LayerDetail title="L3 Structural" text="Schema geometry matches for the latest query." items={(result.l3_structural.length ? result.l3_structural : schemas).map((schema) => `${schema.name}: ${schema.description}`)} />,
+    kick: <LayerDetail title="Kick" text="Divergence detector between surface retrieval and structural pattern." items={[result.kick?.message, `divergence=${result.kick?.divergence}`, `threshold=${result.kick?.threshold}`].filter(Boolean)} />
+  };
   return (
-    <article className={classNames("layer-detail", accent)}>
-      <h3>{title}</h3>
-      <p>{body}</p>
-      <ul>{items.slice(0, 5).map((item) => <li key={item}>{item}</li>)}</ul>
-    </article>
+    <section className="page-panel">
+      <div className="page-head"><div><p className="eyebrow">Ordered Layer View</p><h2>Memory Layers</h2></div><select value={selectedLayer} onChange={(event) => setSelectedLayer(event.target.value)}>{Object.keys(views).map((key) => <option key={key} value={key}>{key.toUpperCase()}</option>)}</select></div>
+      {views[selectedLayer]}
+    </section>
+  );
+}
+
+function Overview({ stats, sources, graph }) {
+  return (
+    <div className="overview-grid">
+      <MetricBox label="Chunks" value={stats.l1_stats?.total_chunks ?? 0} icon={Database} />
+      <MetricBox label="Sources" value={sources.length} icon={FileText} />
+      <MetricBox label="Graph Nodes" value={graph.nodes.length} icon={Network} />
+      <MetricBox label="Graph Edges" value={graph.edges.length} icon={GitBranch} />
+    </div>
   );
 }
 
 function GraphExplorer({ graph, result }) {
   return (
     <section className="page-panel graph-page">
-      <div className="page-head"><div><p className="eyebrow">Associative Topology</p><h2>Graph Explorer</h2></div><Network size={24} /></div>
-      <div className="graph-large"><MemoryGraph graph={graph} /></div>
-      <div className="path-list">
-        {result.l2_associative.map((item) => <div key={item.path || item.entity}><strong>{item.entity}</strong><span>{item.path}</span></div>)}
-      </div>
+      <div className="page-head"><div><p className="eyebrow">Live Memory Graph</p><h2>Graph Explorer</h2></div><Network size={24} /></div>
+      <div className="large-graph"><MemoryGraph graph={graph} /></div>
+      <ResultCard title="Latest L2 Paths" tone="cyan" count={`${result.l2_associative.length} paths`} items={result.l2_associative.map((item) => item.path || item.entity)} />
     </section>
   );
 }
 
-function AnalyticsView({ result, memoryChunks, graphNodes, graphEdges, logs }) {
+function OpsConsole({ anomalies, logs, health, result }) {
   return (
     <section className="page-panel">
-      <div className="page-head"><div><p className="eyebrow">Telemetry</p><h2>Analytics</h2></div><Activity size={24} /></div>
-      <div className="analytics-grid">
-        <MetricBox icon={<Database />} label="Chunks" value={memoryChunks} />
-        <MetricBox icon={<Network />} label="Nodes" value={graphNodes} />
-        <MetricBox icon={<GitBranch />} label="Edges" value={graphEdges} />
-        <MetricBox icon={<AlertTriangle />} label="Kick Severity" value={result.kick.severity} />
-      </div>
-      <div className="timeline">
-        {logs.map((log) => <div className={classNames(log.fire && "fire")} key={`${log.time}-${log.text}`}><span>{log.time}</span>{log.text}</div>)}
+      <div className="page-head"><div><p className="eyebrow">Operational Readiness</p><h2>Errors & Anomalies</h2></div><AlertTriangle size={24} /></div>
+      <div className="ops-grid">
+        <AnomalyPanel anomalies={anomalies} logs={logs} full />
+        <div className="form-card">
+          <h3>Runtime Snapshot</h3>
+          <Metric label="API Status" value={health ? "ready" : "offline"} />
+          <Metric label="Kick Severity" value={result.kick?.severity || "none"} />
+          <Metric label="Kick Divergence" value={result.kick?.divergence ?? 0} />
+          <Metric label="Memory Dir" value={health?.runtime?.memory_dir || "unknown"} compact />
+        </div>
       </div>
     </section>
   );
 }
 
-function SettingsView({ apiBase, kickEnabled, setKickEnabled, apiOnline }) {
+function SettingsConsole({ apiBase, health, refresh }) {
   return (
     <section className="page-panel">
-      <div className="page-head"><div><p className="eyebrow">Runtime</p><h2>Settings</h2></div><Settings size={24} /></div>
-      <div className="settings-grid">
-        <Setting label="API Base URL" value={apiBase} />
-        <Setting label="Backend Status" value={apiOnline ? "Connected" : "Offline demo"} />
-        <Setting label="LLM Endpoint" value="http://localhost:8001/v1/chat/completions" />
-        <Setting label="Embedding Model" value="sentence-transformers/all-mpnet-base-v2" />
-        <Setting label="spaCy Model" value="en_core_web_lg" />
-        <label className="setting-row interactive">Kick Mode<button className={classNames("switch", !kickEnabled && "off")} type="button" onClick={() => setKickEnabled(!kickEnabled)} /></label>
+      <div className="page-head"><div><p className="eyebrow">Configuration</p><h2>Settings</h2></div><Settings size={24} /></div>
+      <div className="settings-list">
+        <Metric label="API Base" value={apiBase} compact />
+        <Metric label="LLM URL" value={health?.llm_url || "unknown"} compact />
+        <Metric label="LLM Model" value={health?.llm_model || "unknown"} compact />
+        <Metric label="Embedding" value={health?.runtime?.embedding_model || "unknown"} compact />
+        <button className="primary" onClick={refresh} type="button"><RefreshCw size={16} /> Refresh Runtime</button>
       </div>
     </section>
   );
 }
 
-function RightRail({ graph, logs, result }) {
+function MemoryVisualization({ graph }) {
   return (
-    <aside className="right-rail">
-      <section className="visual-panel">
-        <div className="rail-head"><span>Memory Visualization</span><strong>● Live</strong></div>
-        <div className="tabs"><button className="active">Graph View</button><button>Layer View</button><button>Path View</button></div>
-        <MemoryGraph graph={graph} />
-        <div className="legend">
-          <span><i className="l1" />L1 Surface</span>
-          <span><i className="l2" />L2 Associative</span>
-          <span><i className="l3" />L3 Structural</span>
-          <span><i className="l4" />L4 Roadmap</span>
-          <span><b />Conflict Path</span>
-        </div>
-      </section>
-      <section className="kick-log">
-        <div className="rail-head"><span>Kick Activity Log</span><button type="button">View All Logs &rarr;</button></div>
-        {logs.map((log) => (
-          <div className={classNames("log-row", log.fire && "fire")} key={`${log.time}-${log.text}`}>
-            <i />
-            <span>{log.time}</span>
-            <p>{log.text}</p>
-          </div>
-        ))}
-        <div className="kick-readout">
-          <strong>{result.kick.severity}</strong>
-          <span>Current divergence: {result.kick.divergence}</span>
-        </div>
-      </section>
-    </aside>
+    <section className="visual-panel">
+      <div className="rail-head"><span>Memory Visualization</span><strong>{graph.nodes.length} nodes</strong></div>
+      <MemoryGraph graph={graph} />
+      <div className="legend"><span><i className="entity" />Entity</span><span><i className="concept" />Concept</span><span><i className="date" />Date/Number</span></div>
+    </section>
   );
 }
 
@@ -629,59 +473,46 @@ function MemoryGraph({ graph }) {
   const nodesRef = useRef([]);
   const frameRef = useRef(null);
   const [selected, setSelected] = useState(null);
+  const nodes = graph.nodes || [];
+  const edges = graph.edges || [];
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.max(360, Math.floor(rect.width * dpr));
+    canvas.width = Math.max(320, Math.floor(rect.width * dpr));
     canvas.height = Math.max(320, Math.floor(rect.height * dpr));
     const width = canvas.width / dpr;
     const height = canvas.height / dpr;
     const previous = new Map(nodesRef.current.map((node) => [node.id, node]));
-    const anchors = {
-      center: [0.5, 0.52],
-      surface: [0.28, 0.28],
-      assoc: [0.72, 0.34],
-      struct: [0.30, 0.72],
-      diffusion: [0.72, 0.72]
-    };
-    nodesRef.current = (graph.nodes || []).map((node, index) => {
+    nodesRef.current = nodes.map((node, index) => {
       const old = previous.get(node.id);
-      const anchor = anchors[node.cluster] || [0.5 + Math.cos(index) * 0.2, 0.5 + Math.sin(index) * 0.2];
-      return {
-        ...node,
-        x: old?.x ?? anchor[0] * width + Math.cos(index * 1.9) * 42,
-        y: old?.y ?? anchor[1] * height + Math.sin(index * 1.9) * 42,
-        vx: old?.vx ?? 0,
-        vy: old?.vy ?? 0
-      };
+      const angle = (index / Math.max(1, nodes.length)) * Math.PI * 2;
+      return { ...node, x: old?.x ?? width / 2 + Math.cos(angle) * width * 0.3, y: old?.y ?? height / 2 + Math.sin(angle) * height * 0.3, vx: old?.vx ?? 0, vy: old?.vy ?? 0 };
     });
-  }, [graph]);
+  }, [nodes]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
-
     function draw() {
       const width = canvas.width / dpr;
       const height = canvas.height / dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, height);
-      const nodes = nodesRef.current;
-      const byId = new Map(nodes.map((node) => [node.id, node]));
+      const liveNodes = nodesRef.current;
+      const byId = new Map(liveNodes.map((node) => [node.id, node]));
 
-      for (let i = 0; i < nodes.length; i += 1) {
-        for (let j = i + 1; j < nodes.length; j += 1) {
-          const a = nodes[i];
-          const b = nodes[j];
+      for (let i = 0; i < liveNodes.length; i += 1) {
+        for (let j = i + 1; j < liveNodes.length; j += 1) {
+          const a = liveNodes[i];
+          const b = liveNodes[j];
           const dx = a.x - b.x;
           const dy = a.y - b.y;
-          const distanceSquared = Math.max(90, dx * dx + dy * dy);
-          const force = 160 / distanceSquared;
+          const force = 190 / Math.max(120, dx * dx + dy * dy);
           a.vx += dx * force;
           a.vy += dy * force;
           b.vx -= dx * force;
@@ -689,89 +520,175 @@ function MemoryGraph({ graph }) {
         }
       }
 
-      for (const edge of graph.edges || []) {
+      for (const edge of edges) {
         const a = byId.get(edge.source);
         const b = byId.get(edge.target);
         if (!a || !b) continue;
         const dx = b.x - a.x;
         const dy = b.y - a.y;
-        const distance = Math.max(1, Math.hypot(dx, dy));
-        const force = (distance - 116) * 0.0008;
-        a.vx += dx * force;
-        a.vy += dy * force;
-        b.vx -= dx * force;
-        b.vy -= dy * force;
-        const conflict = edge.source === "Social Media Platforms" && edge.target === "Algorithmic Amplification";
-        ctx.save();
-        ctx.strokeStyle = conflict ? "rgba(255,71,126,0.78)" : "rgba(124,60,255,0.24)";
-        ctx.lineWidth = conflict ? 1.6 : 1;
-        ctx.setLineDash(conflict ? [5, 5] : []);
+        const dist = Math.max(1, Math.hypot(dx, dy));
+        const pull = (dist - 110) * 0.0009;
+        a.vx += dx * pull;
+        a.vy += dy * pull;
+        b.vx -= dx * pull;
+        b.vy -= dy * pull;
+        ctx.strokeStyle = "rgba(124, 60, 255, 0.26)";
+        ctx.lineWidth = Math.min(2.5, 0.7 + Number(edge.weight || 1) * 0.2);
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
         ctx.stroke();
-        ctx.restore();
       }
 
-      for (const node of nodes) {
-        const pull = node.cluster === "center" ? 0.002 : 0.0004;
-        node.vx += (width / 2 - node.x) * pull;
-        node.vy += (height / 2 - node.y) * pull;
+      for (const node of liveNodes) {
+        node.vx += (width / 2 - node.x) * 0.0008;
+        node.vy += (height / 2 - node.y) * 0.0008;
         node.vx *= 0.88;
         node.vy *= 0.88;
-        node.x = Math.max(34, Math.min(width - 34, node.x + node.vx + Math.sin(Date.now() / 900 + node.weight) * 0.04));
-        node.y = Math.max(34, Math.min(height - 34, node.y + node.vy + Math.cos(Date.now() / 1100 + node.weight) * 0.04));
-        drawNode(ctx, node, selected === node.id);
+        node.x = Math.max(26, Math.min(width - 26, node.x + node.vx));
+        node.y = Math.max(26, Math.min(height - 26, node.y + node.vy));
+        drawGraphNode(ctx, node, selected === node.id);
       }
-
       frameRef.current = requestAnimationFrame(draw);
     }
-
     frameRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frameRef.current);
-  }, [graph, selected]);
+  }, [edges, selected]);
 
-  const onClick = (event) => {
+  function click(event) {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    const hit = nodesRef.current.find((node) => Math.hypot(node.x - x, node.y - y) < 14 + Number(node.weight || 1) * 2.1);
-    setSelected(hit?.id || null);
-  };
+    const hit = nodesRef.current.find((node) => Math.hypot(node.x - x, node.y - y) < radiusFor(node) + 8);
+    setSelected(hit || null);
+  }
 
   return (
-    <div className="graph-canvas-wrap">
-      <canvas ref={canvasRef} onClick={onClick} />
-      {selected && <div className="node-popover">{selected}</div>}
+    <div className="graph-wrap">
+      {nodes.length === 0 && <EmptyState text="No graph nodes yet. Ingest richer text, then refresh." />}
+      <canvas ref={canvasRef} onClick={click} />
+      {selected && <div className="node-popover"><strong>{selected.id}</strong><span>{selected.type} · weight {selected.weight}</span></div>}
     </div>
   );
 }
 
-function drawNode(ctx, node, selected) {
+function drawGraphNode(ctx, node, selected) {
+  const radius = radiusFor(node);
   const color = nodeColor(node.type);
-  const radius = 10 + Math.min(42, Number(node.weight || 1) * 2.15);
   ctx.save();
   ctx.shadowColor = color;
-  ctx.shadowBlur = selected ? 34 : 18;
-  ctx.fillStyle = "rgba(4,8,20,0.94)";
+  ctx.shadowBlur = selected ? 28 : 10;
+  ctx.fillStyle = "rgba(5, 9, 24, 0.95)";
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = selected ? 2.4 : 1.4;
   ctx.beginPath();
   ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
   ctx.shadowBlur = 0;
-  ctx.globalAlpha = 0.35;
-  ctx.beginPath();
-  ctx.arc(node.x, node.y, radius + 9 + Math.sin(Date.now() / 540) * 2, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
   ctx.fillStyle = "#f8fafc";
-  ctx.font = `${node.weight > 9 ? 12 : 10}px Inter`;
+  ctx.font = `${radius > 18 ? 11 : 9}px Inter`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  wrapCanvasText(ctx, node.id, node.x, node.y, Math.max(58, radius * 1.5), node.weight > 9 ? 15 : 12);
+  wrapCanvasText(ctx, node.id, node.x, node.y, radius * 1.7, radius > 18 ? 13 : 11);
   ctx.restore();
+}
+
+function ResultCard({ title, tone, count, items }) {
+  return (
+    <article className={`result-card ${tone}`}>
+      <div><strong>{title}</strong><small>{count}</small></div>
+      {items.length === 0 ? <EmptyState text="No live results yet." /> : <ul>{items.slice(0, 6).map((item) => <li key={item}>{item}</li>)}</ul>}
+    </article>
+  );
+}
+
+function LayerDetail({ title, text, items }) {
+  return (
+    <div className="layer-detail">
+      <h3>{title}</h3>
+      <p>{text}</p>
+      {items.length === 0 ? <EmptyState text="No data for this layer yet." /> : <ul>{items.slice(0, 12).map((item) => <li key={item}>{item}</li>)}</ul>}
+    </div>
+  );
+}
+
+function AnomalyPanel({ anomalies, logs, full = false }) {
+  return (
+    <section className={full ? "anomaly-panel full" : "anomaly-panel"}>
+      <div className="rail-head"><span>Errors & Anomalies</span><strong>{anomalies.length}</strong></div>
+      <div className="anomaly-list">
+        {anomalies.length === 0 ? <div className="anomaly ok"><CheckCircle2 size={16} /> No active anomalies</div> : anomalies.map((item) => (
+          <div className={`anomaly ${item.level}`} key={item.message}><AlertTriangle size={16} /><span>{item.message}</span></div>
+        ))}
+      </div>
+      <div className="log-list">
+        {logs.slice(0, full ? 20 : 8).map((log) => <div className={`log ${log.level}`} key={`${log.time}-${log.message}`}><time>{log.time}</time><span>{log.message}</span></div>)}
+      </div>
+    </section>
+  );
+}
+
+function MetricBox({ icon: Icon, label, value }) {
+  return <div className="metric-box"><Icon size={20} /><span>{label}</span><strong>{value}</strong></div>;
+}
+
+function Metric({ label, value, tone, compact }) {
+  return <div className={`metric ${compact ? "compact" : ""}`}><span>{label}</span><strong className={tone || ""}>{value}</strong></div>;
+}
+
+function StatusPill({ tone, icon: Icon, text, spin }) {
+  return <span className={`status-pill ${tone}`}><Icon className={spin ? "spin" : ""} size={14} />{text}</span>;
+}
+
+function EmptyState({ text }) {
+  return <div className="empty-state">{text}</div>;
+}
+
+function Skeleton() {
+  return <div className="skeleton"><span /><span /><span /></div>;
+}
+
+function normalizeGraph(data) {
+  return { nodes: Array.isArray(data?.nodes) ? data.nodes : [], edges: Array.isArray(data?.edges) ? data.edges : [] };
+}
+
+function detectAnomalies({ health, sources, graph, result, error, llmOnline }) {
+  const items = [];
+  if (error) items.push({ level: "error", message: error });
+  if (!health) items.push({ level: "error", message: "Backend health is unavailable." });
+  if (health && !llmOnline) items.push({ level: "warn", message: "LLM is offline; system is running retrieval-only answers." });
+  if ((health?.l1_stats?.total_chunks ?? 0) === 0) items.push({ level: "warn", message: "No L1 chunks are stored. Ingest source material." });
+  if (sources.length === 0) items.push({ level: "warn", message: "No source registry entries found." });
+  if (graph.nodes.length === 0) items.push({ level: "warn", message: "L2 graph has no nodes. Ingest richer entity-heavy text." });
+  if (graph.nodes.length > 0 && graph.edges.length === 0) items.push({ level: "warn", message: "Graph nodes exist but no relationships were formed." });
+  if (result.kick?.fired) items.push({ level: "warn", message: `Kick fired: ${result.kick.message}` });
+  return items;
+}
+
+function buildRetrievalAnswer(data) {
+  const topFact = data.l1_surface?.[0]?.text || "No surface result was returned.";
+  const topSchema = data.l3_structural?.[0];
+  const schema = topSchema ? `${topSchema.name}: ${topSchema.description}` : "No L3 schema matched.";
+  const paths = data.l2_associative?.slice(0, 3).map((item) => item.path || item.entity).join("; ") || "No L2 paths returned.";
+  return `Retrieval-only answer\n\n${schema}\n\nTop surface memory: ${topFact}\n\nAssociative context: ${paths}\n\nKick: ${data.kick?.message || "No Kick result."}`;
+}
+
+function truncate(text, length) {
+  const value = String(text || "");
+  return value.length > length ? `${value.slice(0, length - 3)}...` : value;
+}
+
+function radiusFor(node) {
+  return 8 + Math.min(22, Number(node.weight || 1) * 2.2);
+}
+
+function nodeColor(type) {
+  const value = String(type || "").toUpperCase();
+  if (value === "CONCEPT") return "#05d9e8";
+  if (["DATE", "CARDINAL", "QUANTITY", "PERCENT", "MONEY"].includes(value)) return "#f59e0b";
+  if (["PERSON", "ORG", "GPE", "LOC", "PRODUCT", "EVENT"].includes(value)) return "#2f7dff";
+  return "#7c3cff";
 }
 
 function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
@@ -791,72 +708,6 @@ function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
   const visible = lines.slice(0, 3);
   const startY = y - ((visible.length - 1) * lineHeight) / 2;
   visible.forEach((row, index) => ctx.fillText(row, x, startY + index * lineHeight));
-}
-
-function nodeColor(type) {
-  const value = String(type || "").toUpperCase();
-  if (value.includes("L1") || value.includes("ORG") || value.includes("PRODUCT")) return "#2f7dff";
-  if (value.includes("L2") || value.includes("PERSON") || value.includes("GPE") || value.includes("CONCEPT")) return "#05d9e8";
-  if (value.includes("L3")) return "#f59e0b";
-  return "#7c3aed";
-}
-
-function IngestModal({ open, onClose, onIngest }) {
-  const [source, setSource] = useState("manual_notes.txt");
-  const [text, setText] = useState("");
-  const [status, setStatus] = useState("Ready");
-  if (!open) return null;
-  const submit = async () => setStatus(await onIngest({ source, text }));
-  return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="modal-card">
-        <div className="modal-head"><h2>Ingest Source</h2><button type="button" onClick={onClose}>Close</button></div>
-        <label>Source Name<input value={source} onChange={(event) => setSource(event.target.value)} /></label>
-        <label>Source Text<textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Paste a document, notes, transcript, or markdown here..." /></label>
-        <div className="modal-foot"><span>{status}</span><button className="primary" type="button" onClick={submit}><Upload size={18} /> Ingest</button></div>
-      </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, warm }) {
-  return <div className="metric"><span>{label}</span><strong className={warm ? "warm" : ""}>{value}</strong></div>;
-}
-
-function MetricBox({ icon, label, value }) {
-  return <div className="metric-box">{React.cloneElement(icon, { size: 20 })}<span>{label}</span><strong>{value}</strong></div>;
-}
-
-function Setting({ label, value }) {
-  return <div className="setting-row"><span>{label}</span><strong>{value}</strong></div>;
-}
-
-function sourceType(source) {
-  const lower = source.toLowerCase();
-  if (lower.endsWith(".md")) return "MD";
-  if (lower.endsWith(".pdf")) return "PDF";
-  return "TXT";
-}
-
-function buildClientRetrievalAnswer(data) {
-  const topFact = data.l1_surface?.[0]?.text || "No surface memory matched this query yet.";
-  const topSchema = data.l3_structural?.[0];
-  const schemaLine = topSchema
-    ? `L3 identified ${topSchema.name} as the strongest structural pattern. ${topSchema.description}`
-    : "L3 did not find a structural schema above threshold.";
-  const paths = data.l2_associative?.slice(0, 3).map((item) => item.path || item.entity).join("; ") || "No L2 graph paths were found.";
-  const kick = data.kick || {};
-  return [
-    "DREAMWEAVE is running in retrieval mode because the local LLM is not reachable yet.",
-    "",
-    schemaLine,
-    "",
-    `Top L1 surface fact: ${topFact}`,
-    "",
-    `L2 associative paths: ${paths}`,
-    "",
-    `Kick status: ${kick.message || "Kick was not evaluated"} Severity: ${kick.severity || "none"}, divergence: ${kick.divergence ?? 0}.`
-  ].join("\n");
 }
 
 createRoot(document.getElementById("root")).render(<App />);
