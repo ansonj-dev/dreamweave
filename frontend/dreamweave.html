@@ -2129,42 +2129,12 @@ const API_BASE = window.location.origin; // same origin when served by FastAPI
 // GRAPH CANVAS — Main visualization (Graph View)
 // ═══════════════════════════════════════════════
 // DEMO DATA - Replace with real backend data
-let graphNodes = [
-  { id: 0, label: 'Misinformation\nCampaigns', x: 0.5, y: 0.5, r: 38, color: '#9d5cf6', glow: '#7c3aed' },
-  { id: 1, label: 'Social Media\nPlatforms', x: 0.28, y: 0.38, r: 28, color: '#14b8a6', glow: '#0d9488' },
-  { id: 2, label: 'Algorithmic\nAmplification', x: 0.5, y: 0.75, r: 24, color: '#f59e0b', glow: '#d97706' },
-  { id: 3, label: 'Information\nDiffusion', x: 0.75, y: 0.45, r: 22, color: '#3b82f6', glow: '#2563eb' },
-  { id: 4, label: 'Psychological\nTriggers', x: 0.82, y: 0.22, r: 20, color: '#14b8a6', glow: '#0d9488' },
-  { id: 5, label: 'Twitter', x: 0.13, y: 0.22, r: 12, color: '#60a5fa', glow: '#3b82f6' },
-  { id: 6, label: 'Facebook', x: 0.35, y: 0.12, r: 12, color: '#60a5fa', glow: '#3b82f6' },
-  { id: 7, label: 'TikTok', x: 0.6, y: 0.15, r: 12, color: '#60a5fa', glow: '#3b82f6' },
-  { id: 8, label: 'Reddit', x: 0.08, y: 0.55, r: 10, color: '#a78bfa', glow: '#7c3aed' },
-  { id: 9, label: 'Engagement', x: 0.18, y: 0.72, r: 13, color: '#f59e0b', glow: '#d97706' },
-  { id: 10, label: 'Ranking', x: 0.2, y: 0.88, r: 10, color: '#f59e0b', glow: '#d97706' },
-  { id: 11, label: 'Recommendation', x: 0.42, y: 0.92, r: 10, color: '#f59e0b', glow: '#d97706' },
-  { id: 12, label: 'Virality', x: 0.62, y: 0.88, r: 11, color: '#ec4899', glow: '#db2777' },
-  { id: 13, label: 'Echo\nChamber', x: 0.82, y: 0.72, r: 16, color: '#3b82f6', glow: '#2563eb' },
-  { id: 14, label: 'Network\nEffect', x: 0.75, y: 0.62, r: 13, color: '#3b82f6', glow: '#2563eb' },
-  { id: 15, label: 'Cascade\nEffect', x: 0.9, y: 0.5, r: 11, color: '#ef4444', glow: '#dc2626' },
-  { id: 16, label: 'Spread', x: 0.95, y: 0.32, r: 11, color: '#ef4444', glow: '#dc2626' },
-  { id: 17, label: 'Fear', x: 0.9, y: 0.1, r: 11, color: '#ec4899', glow: '#db2777' },
-  { id: 18, label: 'Anger', x: 1.0, y: 0.22, r: 10, color: '#ec4899', glow: '#db2777' },
-  { id: 19, label: 'Bias', x: 0.72, y: 0.08, r: 10, color: '#a78bfa', glow: '#7c3aed' },
-  { id: 20, label: 'Identity', x: 0.92, y: 0.38, r: 10, color: '#a78bfa', glow: '#7c3aed' },
-];
+let graphNodes = [];
 
-let graphEdges = [
-  [0,1], [0,2], [0,3], [0,4],
-  [1,5], [1,6], [1,7], [1,8],
-  [1,2], [2,9], [2,10], [2,11], [2,12],
-  [3,13], [3,14], [3,15], [3,16],
-  [4,17], [4,18], [4,19], [4,20],
-  [9,12], [13,12], [14,15],
-  [0,9], [3,12], [1,13],
-];
+let graphEdges = [];
 
 // Conflict edges (dashed red)
-let conflictEdges = [[0,13],[1,4],[2,16]];
+let conflictEdges = [];
 
 let animFrame = 0;
 let graphAnimId;
@@ -2215,27 +2185,7 @@ function showNodePopup(node, x, y) {
   if (existing) existing.remove();
   
   // Node descriptions (max 50 words)
-  const descriptions = {
-    'Misinformation\nCampaigns': 'Coordinated efforts spreading false information through social networks using emotional triggers and algorithmic amplification to bypass critical thinking.',
-    'Social\nMedia': 'Digital platforms enabling content creation, sharing, and social networking that amplify information spread through network effects.',
-    'Echo\nChamber': 'Environment where beliefs are amplified through repetition in closed systems, reinforcing existing views while limiting exposure to opposing perspectives.',
-    'Algorithmic\nAmplification': 'Process where recommendation algorithms increase content reach and visibility based on engagement metrics, often prioritizing emotional or controversial material.',
-    'Network\nEffects': 'Phenomenon where products or services gain value as more people use them, creating exponential growth in reach and influence.',
-    'Engagement\nMetrics': 'Measurements of user interaction including likes, shares, comments, and time spent, used to optimize content distribution algorithms.',
-    'Polarization': 'Division into sharply contrasting groups with opposing opinions, often intensified by algorithmic curation and selective exposure to information.',
-    'Filter\nBubble': 'Intellectual isolation resulting from personalized searches and algorithmic curation that limits exposure to diverse viewpoints and information.',
-    'Viral\nSpread': 'Rapid widespread dissemination of content through social sharing, driven by emotional resonance, novelty, and network effects.',
-    'Confirmation\nBias': 'Tendency to search for, interpret, and recall information confirming pre-existing beliefs while dismissing contradictory evidence.',
-    'Information\nCascade': 'Phenomenon where people observe others\' actions and make similar choices in sequence, regardless of private information.',
-    'Emotional\nTriggers': 'Content elements designed to evoke strong emotional responses like fear, anger, or joy that drive engagement and sharing.',
-    'Belief\nFormation': 'Process by which individuals develop and solidify understanding and convictions through information exposure and social influence.',
-    'Trust\nErosion': 'Gradual decline in confidence toward institutions, media, and information sources, often accelerated by misinformation exposure.',
-    'Cognitive\nDissonance': 'Mental discomfort from holding contradictory beliefs, values, or attitudes simultaneously, often resolved by rejecting conflicting information.',
-    'Homophily': 'Tendency of individuals to associate and bond with similar others, creating clustered networks that reinforce shared beliefs.',
-    'Attention\nEconomy': 'Treatment of human attention as scarce commodity in information-rich environments, driving competition for engagement and clicks.'
-  };
-  
-  const desc = descriptions[node.label] || 'A concept in the knowledge graph.';
+  const desc = node.label + " - Part of the knowledge graph.";
   
   // Create popup
   const popup = document.createElement('div');
@@ -2707,6 +2657,7 @@ async function sendMessage() {
     if (layersData) {
       const mapped = buildRenderData(layersData, answerText, elapsed);
       renderAnswer(mapped);
+      refreshGraph();
     } else {
       showToast('No results — ingest some documents first', 'error');
     }
@@ -2812,8 +2763,11 @@ function renderAnswer(data) {
   const answerEl = ab.querySelector('.answer-text-new');
   answerEl.classList.remove('answer-text-new'); // clean up marker class
 
-  // Append retrieval summary and sources after answer text
+  // Append retrieval summary and sources slowly
   const metaDiv = document.createElement('div');
+  metaDiv.style.opacity = '0';
+  metaDiv.style.transition = 'opacity 1s ease-in-out';
+  metaDiv.style.marginTop = '16px';
   metaDiv.innerHTML = `
     <div class="retrieval-summary">
       <div class="retrieval-label">Retrieval Summary</div>
@@ -2837,8 +2791,6 @@ function renderAnswer(data) {
       <div class="sources-label"><span>Sources Used</span><span class="sources-view-all" onclick="openAllSources()">View All</span></div>
       <div class="sources-chips">${data.sources.map((s,i)=>{const layers=['L1 · Chunk #'+Math.ceil(Math.random()*20),'L1 · Chunk #'+Math.ceil(Math.random()*10),'L2 · Relationship','L3 · Pattern'];return`<div class="source-chip"><div class="sc-name">${s}</div><div class="sc-meta">${layers[i%4]}</div></div>`}).join('')}</div>
     </div>`;
-  ab.appendChild(metaDiv);
-
   const rawAnswer = data.answer;
   
   // Parse retrieval fallback text into structured HTML
@@ -2879,6 +2831,9 @@ function renderAnswer(data) {
   if (formatted.isHtml) {
     // Render structured HTML immediately, no typing effect needed
     answerEl.innerHTML = formatted.html;
+    ab.appendChild(metaDiv);
+    void metaDiv.offsetWidth;
+    metaDiv.style.opacity = '1';
     if (!userScrolled) chat.scrollTop = chat.scrollHeight;
     chat.removeEventListener('scroll', scrollGuard);
   } else {
@@ -2889,10 +2844,25 @@ function renderAnswer(data) {
       if (charIndex < fullText.length) {
         answerEl.textContent = fullText.substring(0, charIndex + 1);
         charIndex++;
+        
+        // Show metaDiv midway through typing
+        if (charIndex === Math.floor(fullText.length / 2)) {
+          ab.appendChild(metaDiv);
+          // Trigger reflow
+          void metaDiv.offsetWidth;
+          metaDiv.style.opacity = '1';
+        }
+        
         // Only auto-scroll if user hasn't manually scrolled up
         if (!userScrolled) chat.scrollTop = chat.scrollHeight;
         setTimeout(typeChar, 18);
       } else {
+        // Fallback in case string is very short
+        if (!ab.contains(metaDiv)) {
+          ab.appendChild(metaDiv);
+          void metaDiv.offsetWidth;
+          metaDiv.style.opacity = '1';
+        }
         chat.removeEventListener('scroll', scrollGuard);
       }
     }
