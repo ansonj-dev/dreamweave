@@ -2289,9 +2289,10 @@ function showNodePopup(node, x, y) {
   
   // Close on outside click
   setTimeout(() => {
+    const thisController = currentPopupAbortController;
     const closeOnOutside = (e) => {
       if (!popup.contains(e.target)) {
-        if (currentPopupAbortController) currentPopupAbortController.abort();
+        if (thisController) thisController.abort();
         popup.remove();
         document.removeEventListener('click', closeOnOutside);
       }
