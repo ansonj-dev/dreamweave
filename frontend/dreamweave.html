@@ -2246,6 +2246,7 @@ function showNodePopup(node, x, y) {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buf = '';
+    let currentEvent = '';
     
     while (true) {
       const { done, value } = await reader.read();
@@ -2253,7 +2254,6 @@ function showNodePopup(node, x, y) {
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split('\n');
       buf = lines.pop();
-      let currentEvent = '';
       for (const line of lines) {
         if (line.startsWith('event: ')) {
           currentEvent = line.slice(7).trim();
@@ -2267,10 +2267,15 @@ function showNodePopup(node, x, y) {
                if (tokenBuffer === '') textEl.textContent = ''; // clear 'Generating...'
                tokenBuffer += evt.token;
                textEl.textContent = tokenBuffer;
+            } else if (currentEvent === 'error' || evt.message) {
+               textEl.textContent = "Error: " + evt.message;
+               textEl.classList.remove('magic-typing-cursor');
             } else if (currentEvent === 'done' || evt.status === 'complete') {
                textEl.classList.remove('magic-typing-cursor');
             }
-          } catch(e) {}
+          } catch(e) {
+             console.error("Parse error", e);
+          }
         }
       }
     }
