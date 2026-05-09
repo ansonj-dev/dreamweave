@@ -802,6 +802,31 @@
   }
   .send-btn:hover { background: var(--accent-purple-bright); box-shadow: 0 0 12px rgba(124,58,237,0.4); }
   .send-btn svg { width: 16px; height: 16px; }
+  .send-btn.hidden { display: none; }
+  
+  .stop-btn {
+    background: var(--accent-red);
+    border: none;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    transition: all 0.15s;
+    color: white;
+    margin-left: 6px;
+    animation: pulseStop 1.5s ease-in-out infinite;
+  }
+  .stop-btn.show { display: flex; }
+  .stop-btn:hover { background: var(--accent-red-bright); box-shadow: 0 0 12px rgba(239,68,68,0.4); }
+  .stop-btn svg { width: 16px; height: 16px; }
+  
+  @keyframes pulseStop {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    50% { box-shadow: 0 0 8px rgba(239,68,68,0.6); }
+  }
 
   /* Kick Mode Toggle - Below Input */
   .kick-mode-area {
@@ -1604,8 +1629,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
         </button>
         <input type="text" id="chatInput" placeholder="Ask anything about your knowledge…" onkeydown="handleInputKey(event)">
-        <button class="send-btn" onclick="sendMessage()">
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+        <button class="stop-btn" id="stopBtn" onclick="stopGeneration()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
         </button>
       </div>
       <!-- Kick Mode Toggle - Below Input -->
@@ -2452,6 +2480,8 @@ function switchVizTab(el, pane) {
 
 let kickOn = false;
 let kickFiredCount = 0;
+let currentStreamReader = null; // Track the current stream reader for cancellation
+
 function toggleKick() {
   kickOn = !kickOn;
   const tog = document.getElementById('kickToggle');
@@ -2657,6 +2687,10 @@ async function sendMessage() {
   });
   chat.scrollTop = chat.scrollHeight;
 
+  // Show stop button, hide send button
+  document.getElementById('sendBtn').classList.add('hidden');
+  document.getElementById('stopBtn').classList.add('show');
+
   const started = Date.now();
   let layersData = null;
 
@@ -2669,6 +2703,7 @@ async function sendMessage() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const reader = res.body.getReader();
+    currentStreamReader = reader; // Store for cancellation
     const decoder = new TextDecoder();
     let buf = '';
     let answerText = '';
@@ -2692,6 +2727,7 @@ async function sendMessage() {
       }
     }
 
+    currentStreamReader = null; // Clear after completion
     typing.classList.remove('show');
     // Reset layer status chips
     document.querySelectorAll('.layer-status').forEach((el, i) => {
@@ -2707,12 +2743,41 @@ async function sendMessage() {
       showToast('No results — ingest some documents first', 'error');
     }
   } catch(err) {
+    currentStreamReader = null; // Clear on error
     typing.classList.remove('show');
     // Reset layer status chips
     document.querySelectorAll('.layer-status').forEach((el, i) => {
       if (i < 3) { el.textContent = 'IDLE'; el.classList.remove('active'); el.classList.add('idle'); }
     });
-    showToast('Backend error: ' + err.message, 'error');
+    if (err.name !== 'AbortError') {
+      showToast('Backend error: ' + err.message, 'error');
+    }
+  } finally {
+    // Always restore buttons
+    document.getElementById('sendBtn').classList.remove('hidden');
+    document.getElementById('stopBtn').classList.remove('show');
+  }
+}
+
+function stopGeneration() {
+  if (currentStreamReader) {
+    currentStreamReader.cancel(); // Cancel the stream
+    currentStreamReader = null;
+    
+    const typing = document.getElementById('typingIndicator');
+    typing.classList.remove('show');
+    
+    // Reset layer status chips
+    document.querySelectorAll('.layer-status').forEach((el, i) => {
+      if (i < 3) { el.textContent = 'IDLE'; el.classList.remove('active'); el.classList.add('idle'); }
+    });
+    
+    // Restore buttons
+    document.getElementById('sendBtn').classList.remove('hidden');
+    document.getElementById('stopBtn').classList.remove('show');
+    
+    showToast('Generation stopped', 'success');
+    addKickLog('f59e0b', 'Generation stopped by user');
   }
 }
 
