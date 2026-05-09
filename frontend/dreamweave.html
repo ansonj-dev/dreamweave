@@ -1516,15 +1516,15 @@
       </div>
       <div class="status-row">
         <span class="status-label">Layers Active</span>
-        <span class="status-value">4 / 4</span>
+        <span class="status-value" id="statLayers">3 / 3</span>
       </div>
       <div class="status-row">
-        <span class="status-label">Kick Sensitivity</span>
-        <span class="status-value amber">Medium</span>
+        <span class="status-label">Total Chunks</span>
+        <span class="status-value" id="statChunks">0</span>
       </div>
       <div class="status-row">
-        <span class="status-label">Memory Utilization</span>
-        <span class="status-value">68%</span>
+        <span class="status-label">Graph Nodes</span>
+        <span class="status-value" id="statNodes">0</span>
       </div>
       <div class="progress-bar">
         <div class="progress-fill" style="width:68%"></div>
@@ -2451,6 +2451,7 @@ function switchVizTab(el, pane) {
 }
 
 let kickOn = false;
+let kickFiredCount = 0;
 function toggleKick() {
   kickOn = !kickOn;
   const tog = document.getElementById('kickToggle');
@@ -2508,8 +2509,44 @@ function openGraphExplorer() {
   openModal('graphModal');
   setTimeout(drawExploreGraph, 100);
 }
-function showMemoryLayers() { openModal('memoryLayersModal'); }
-function openAnalytics() { openModal('analyticsModal'); }
+async function showMemoryLayers() {
+  openModal('memoryLayersModal');
+  try {
+    const res = await fetch(`${API_BASE}/stats`);
+    if (!res.ok) return;
+    const d = await res.json();
+    // Update L1 desc
+    const descs = document.querySelectorAll('.lv-desc');
+    if (descs[0]) descs[0].textContent = `Qdrant in-memory · all-mpnet-base-v2 · 768 dim · ${d.l1_total_chunks} total chunks · avg depth ${(d.l1_avg_depth||0).toFixed(2)}`;
+    if (descs[1]) {
+      const top = d.graph_top_entities && d.graph_top_entities[0];
+      const hub = top ? top.entity || top.id || 'N/A' : 'N/A';
+      descs[1].textContent = `NetworkX DiGraph · spaCy en_core_web_lg · ${d.graph_nodes} nodes · ${d.graph_edges} edges · top hub: ${hub}`;
+    }
+    // Update bars
+    const bars = document.querySelectorAll('.lv-bar');
+    const pct = Math.min(100, Math.round((d.l1_total_chunks / 200) * 100));
+    if (bars[0]) bars[0].style.width = pct + '%';
+    const gpct = Math.min(100, Math.round((d.graph_nodes / 150) * 100));
+    if (bars[1]) bars[1].style.width = gpct + '%';
+  } catch(e) { /* keep existing display */ }
+}
+async function openAnalytics() {
+  openModal('analyticsModal');
+  try {
+    const res = await fetch(`${API_BASE}/stats`);
+    if (!res.ok) return;
+    const d = await res.json();
+    // Update analytics numbers
+    const nums = document.querySelectorAll('.analytics-num');
+    if (nums[0]) nums[0].textContent = d.l1_total_chunks || 0;
+    if (nums[1]) nums[1].textContent = `${d.graph_nodes || 0} / ${d.graph_edges || 0}`;
+    if (nums[2]) nums[2].textContent = d.schemas_count || 8;
+    // Kick count tracked in session
+    const kickNumEl = document.querySelectorAll('.analytics-num')[3];
+    if (kickNumEl) kickNumEl.textContent = kickFiredCount;
+  } catch(e) { /* keep existing display */ }
+}
 function openSettings() { openModal('settingsModal'); }
 function openAllLogs() { openModal('logsModal'); }
 
@@ -2614,6 +2651,10 @@ async function sendMessage() {
 
   const typing = document.getElementById('typingIndicator');
   typing.classList.add('show');
+  // Update layer status chips to ACTIVE
+  document.querySelectorAll('.layer-status').forEach((el, i) => {
+    if (i < 3) { el.textContent = 'ACTIVE'; el.classList.remove('idle'); el.classList.add('active'); }
+  });
   chat.scrollTop = chat.scrollHeight;
 
   const started = Date.now();
@@ -2652,6 +2693,10 @@ async function sendMessage() {
     }
 
     typing.classList.remove('show');
+    // Reset layer status chips
+    document.querySelectorAll('.layer-status').forEach((el, i) => {
+      if (i < 3) { el.textContent = 'IDLE'; el.classList.remove('active'); el.classList.add('idle'); }
+    });
     const elapsed = ((Date.now() - started) / 1000).toFixed(2) + 's';
 
     if (layersData) {
@@ -2663,6 +2708,10 @@ async function sendMessage() {
     }
   } catch(err) {
     typing.classList.remove('show');
+    // Reset layer status chips
+    document.querySelectorAll('.layer-status').forEach((el, i) => {
+      if (i < 3) { el.textContent = 'IDLE'; el.classList.remove('active'); el.classList.add('idle'); }
+    });
     showToast('Backend error: ' + err.message, 'error');
   }
 }
@@ -2789,7 +2838,7 @@ function renderAnswer(data) {
     </div>
     <div class="sources-section">
       <div class="sources-label"><span>Sources Used</span><span class="sources-view-all" onclick="openAllSources()">View All</span></div>
-      <div class="sources-chips">${data.sources.map((s,i)=>{const layers=['L1 · Chunk #'+Math.ceil(Math.random()*20),'L1 · Chunk #'+Math.ceil(Math.random()*10),'L2 · Relationship','L3 · Pattern'];return`<div class="source-chip"><div class="sc-name">${s}</div><div class="sc-meta">${layers[i%4]}</div></div>`}).join('')}</div>
+      <div class="sources-chips">${data.sources.map(s=>`<div class="source-chip"><div class="sc-name">${s}</div><div class="sc-meta">L1 · Source</div></div>`).join('')}</div>
     </div>`;
   const rawAnswer = data.answer;
   
@@ -2871,6 +2920,7 @@ function renderAnswer(data) {
 
   // Only log kick activity if kick mode is enabled
   if (shouldShowKick) {
+    kickFiredCount++;
     addKickLog('ef4444', '<strong>Kick triggered:</strong> Divergence detected in ' + data.schema + ' pattern');
     addKickLog('f59e0b', 'Re-ranking retrieval with graph context...');
     addKickLog('22c55e', 'Response generated in ' + data.time);
@@ -2910,8 +2960,10 @@ function showToast(msg, type='success') {
 // ═══════════════════════════════════════════════
 window.addEventListener('load', () => {
   initGraph();
-  checkHealth();
-  loadSources();
+  checkHealth().then(() => {
+    loadSources();
+    refreshGraph();
+  });
 });
 
 window.addEventListener('resize', () => {
@@ -2958,7 +3010,7 @@ async function loadSources() {
         <div class="source-icon ${iconClass}">${ext}</div>
         <div class="source-info">
           <div class="source-name">${name}</div>
-          <div class="source-meta">${ext} · ${s.chunk_count || 0} chunks</div>
+          <div class="source-meta">${ext} · ${s.chunks || s.chunk_count || 0} chunks</div>
         </div>`;
       list.appendChild(item);
     });
@@ -2975,7 +3027,7 @@ async function refreshGraph() {
     const W = 1, H = 1;
     const nodes = g.nodes.slice(0, 25).map((n, i) => ({
       id: i,
-      label: n.entity || n.id || `Node ${i}`,
+      label: n.id || n.entity || n.label || `Node ${i}`,
       x: 0.1 + Math.random() * 0.8,
       y: 0.1 + Math.random() * 0.8,
       r: Math.max(10, Math.min(36, (n.weight || 1) * 4)),

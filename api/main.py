@@ -192,12 +192,14 @@ async def call_llm(context: str, query: str, max_tokens: int, retrieval_context:
         "temperature": 0.3,
     }
     try:
-        async with httpx.AsyncClient(timeout=12.0) as client:
+        async with httpx.AsyncClient(timeout=90.0) as client:
             response = await client.post(LLM_URL, json=payload)
             response.raise_for_status()
             data = response.json()
             return str(data["choices"][0]["message"]["content"])
-    except Exception:
+    except Exception as llm_err:
+        import logging
+        logging.getLogger("dreamweave").warning(f"LLM call failed: {llm_err}")
         return build_retrieval_answer(query, retrieval_context)
 
 
@@ -244,6 +246,23 @@ async def graph(entity: str | None = Query(default=None)) -> dict[str, Any]:
 @app.get("/schemas")
 async def schemas() -> list[dict[str, str]]:
     return get_orchestrator().l3.list_schemas()
+
+
+@app.get("/stats")
+async def stats() -> dict:
+    dw = get_orchestrator()
+    l1 = dw.l1.stats()
+    g = dw.l2.stats()
+    return {
+        "l1_total_chunks": l1.get("total_chunks", 0),
+        "l1_avg_depth": l1.get("avg_depth_score", 0.0),
+        "l1_sources": l1.get("sources", []),
+        "graph_nodes": g.get("nodes", 0),
+        "graph_edges": g.get("edges", 0),
+        "graph_top_entities": g.get("top_entities", []),
+        "kick_threshold": dw.kick.threshold,
+        "schemas_count": len(dw.l3.list_schemas()),
+    }
 
 
 @app.get("/sources")
