@@ -560,7 +560,42 @@
     font-family: 'Cormorant Garamond', serif;
     font-size: 17px; 
     line-height: 1.7; 
-    color: var(--text-primary); 
+    color: var(--text-primary);
+    white-space: pre-line;
+  }
+  /* Retrieval-mode fallback answer styling */
+  .answer-text .retrieval-note {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent-amber-bright);
+    background: rgba(217,119,6,0.08);
+    border: 1px solid rgba(217,119,6,0.2);
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-bottom: 14px;
+    font-style: normal;
+  }
+  .answer-text .retrieval-section {
+    display: block;
+    margin-bottom: 12px;
+  }
+  .answer-text .retrieval-section-label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .answer-text .retrieval-section-value {
+    display: block;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 16px;
+    color: var(--text-primary);
+    line-height: 1.6;
   }
   
   /* Typing animation */
@@ -589,16 +624,23 @@
   }
   .retrieval-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
+    min-width: 0;
+  }
+  .retrieval-card {
+    min-width: 0;
+    word-break: break-word;
   }
   .retrieval-card {
     background: var(--bg-mid);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 14px;
+    padding: 10px 12px;
     cursor: pointer;
     transition: all 0.15s;
+    min-width: 0;
+    overflow: hidden;
   }
   .retrieval-card:hover { border-color: var(--border-bright); background: var(--bg-hover); }
   .rc-header {
@@ -616,14 +658,17 @@
   .rc-kick .rc-title { color: var(--kick-color); }
   .rc-bullets { list-style: none; }
   .rc-bullets li {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-secondary);
     padding: 2px 0;
     padding-left: 10px;
     position: relative;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.4;
   }
   .rc-bullets li::before { content: '•'; position: absolute; left: 0; color: var(--text-muted); }
   .rc-score {
@@ -2935,18 +2980,65 @@ function renderAnswer(data) {
 
   // Typing effect for answer
   const answerEl = document.getElementById('typingAnswer');
-  const fullText = data.answer;
-  let charIndex = 0;
+  const rawAnswer = data.answer;
   
-  function typeChar() {
-    if (charIndex < fullText.length) {
-      answerEl.textContent = fullText.substring(0, charIndex + 1);
-      charIndex++;
-      chat.scrollTop = chat.scrollHeight;
-      setTimeout(typeChar, 20); // Adjust speed here (lower = faster)
+  // Parse retrieval fallback text into structured HTML
+  function formatAnswer(text) {
+    if (!text.startsWith('Local LLM is not reachable')) {
+      return { isHtml: false, text };
     }
+    // It's a retrieval-grounded fallback — format it nicely
+    const lines = text.split('\n').filter(l => l.trim());
+    let html = '<span class="retrieval-note">⚡ LLM offline — showing retrieval-grounded answer</span>';
+    for (const line of lines) {
+      if (line.startsWith('Query:')) {
+        html += `<span class="retrieval-section"><span class="retrieval-section-label">Query</span><span class="retrieval-section-value">${line.replace('Query:', '').trim()}</span></span>`;
+      } else if (line.startsWith('L3 identified')) {
+        const val = line.replace('L3 identified the strongest structure as', '').trim();
+        html += `<span class="retrieval-section"><span class="retrieval-section-label">L3 Structural Pattern</span><span class="retrieval-section-value">${val}</span></span>`;
+      } else if (line.startsWith('Top L1 surface fact:')) {
+        const val = line.replace('Top L1 surface fact:', '').trim();
+        html += `<span class="retrieval-section"><span class="retrieval-section-label">Top L1 Surface Fact</span><span class="retrieval-section-value">${val}</span></span>`;
+      } else if (line.startsWith('L2 associative paths:')) {
+        const val = line.replace('L2 associative paths:', '').trim();
+        html += `<span class="retrieval-section"><span class="retrieval-section-label">L2 Associative Paths</span><span class="retrieval-section-value">${val}</span></span>`;
+      } else if (line.startsWith('Kick status:')) {
+        const val = line.replace('Kick status:', '').trim();
+        html += `<span class="retrieval-section"><span class="retrieval-section-label">Kick Status</span><span class="retrieval-section-value" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text-muted)">${val}</span></span>`;
+      }
+    }
+    return { isHtml: true, html };
   }
-  typeChar();
+
+  const formatted = formatAnswer(rawAnswer);
+  
+  // Track if user is manually scrolling — don't fight them
+  let userScrolled = false;
+  const scrollGuard = () => { userScrolled = true; };
+  chat.addEventListener('scroll', scrollGuard, { passive: true });
+  
+  if (formatted.isHtml) {
+    // Render structured HTML immediately, no typing effect needed
+    answerEl.innerHTML = formatted.html;
+    if (!userScrolled) chat.scrollTop = chat.scrollHeight;
+    chat.removeEventListener('scroll', scrollGuard);
+  } else {
+    // Standard typing effect for real LLM answers
+    const fullText = formatted.text;
+    let charIndex = 0;
+    function typeChar() {
+      if (charIndex < fullText.length) {
+        answerEl.textContent = fullText.substring(0, charIndex + 1);
+        charIndex++;
+        // Only auto-scroll if user hasn't manually scrolled up
+        if (!userScrolled) chat.scrollTop = chat.scrollHeight;
+        setTimeout(typeChar, 18);
+      } else {
+        chat.removeEventListener('scroll', scrollGuard);
+      }
+    }
+    typeChar();
+  }
 
   // Only log kick activity if kick mode is enabled
   if (shouldShowKick) {
@@ -2959,7 +3051,7 @@ function renderAnswer(data) {
     addKickLog('8b9ab5', 'Query processed — kick mode disabled');
   }
 
-  chat.scrollTop = chat.scrollHeight;
+  if (!userScrolled) chat.scrollTop = chat.scrollHeight;
 }
 
 function addKickLog(color, text) {
