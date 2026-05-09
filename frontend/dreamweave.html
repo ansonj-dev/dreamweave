@@ -3236,40 +3236,16 @@ function renderAnswer(data, onDone) {
   
   if (formatted.isHtml) {
     answerEl.innerHTML = formatted.html;
-    ab.appendChild(metaDiv);
-    void metaDiv.offsetWidth;
-    metaDiv.style.opacity = '1';
-    if (!userScrolled) chat.scrollTop = chat.scrollHeight;
-    chat.removeEventListener('scroll', scrollGuard);
-    if (onDone) onDone();
   } else {
-    const fullText = formatted.text;
-    let charIndex = 0;
-    answerEl.classList.add('magic-typing-cursor');
-    function typeChar() {
-      if (charIndex < fullText.length) {
-        answerEl.textContent = fullText.substring(0, charIndex + 1);
-        charIndex++;
-        if (charIndex === Math.floor(fullText.length / 2)) {
-          ab.appendChild(metaDiv);
-          void metaDiv.offsetWidth;
-          metaDiv.style.opacity = '1';
-        }
-        if (!userScrolled) chat.scrollTop = chat.scrollHeight;
-        typingTimer = setTimeout(typeChar, 18);
-      } else {
-        answerEl.classList.remove('magic-typing-cursor');
-        if (!ab.contains(metaDiv)) {
-          ab.appendChild(metaDiv);
-          void metaDiv.offsetWidth;
-          metaDiv.style.opacity = '1';
-        }
-        chat.removeEventListener('scroll', scrollGuard);
-        if (onDone) onDone();
-      }
-    }
-    typeChar();
+    answerEl.textContent = formatted.text;
   }
+  
+  ab.appendChild(metaDiv);
+  void metaDiv.offsetWidth;
+  metaDiv.style.opacity = '1';
+  if (!userScrolled) chat.scrollTop = chat.scrollHeight;
+  chat.removeEventListener('scroll', scrollGuard);
+  if (onDone) onDone();
 
   // Kick log with severity color coding
   if (kickSeverity === 'halted') {

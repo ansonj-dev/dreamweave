@@ -539,6 +539,62 @@ def build_retrieval_answer(query: str, context: dict[str, Any]) -> str:
     )
 
 
+@app.get("/gpu-stats")
+async def gpu_stats():
+    import subprocess
+    # Try AMD rocm-smi first
+    try:
+        result = subprocess.run(["rocm-smi", "--showmeminfo", "vram", "--json"], capture_output=True, text=True, timeout=2)
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            # Find the first card
+            for card_key, card_data in data.items():
+                if card_key.startswith("card"):
+                    # Find total and used memory keys (can vary slightly by rocm-smi version)
+                    total_b = 0
+                    used_b = 0
+                    for k, v in card_data.items():
+                        if "Total Memory" in k or "Total VRAM" in k:
+                            total_b = int(v)
+                        elif "Total Used Memory" in k or "Used VRAM" in k:
+                            used_b = int(v)
+                    if total_b > 0:
+                        return {
+                            "vendor": "AMD",
+                            "vram_used_gb": round(used_b / (1024**3), 1),
+                            "vram_total_gb": round(total_b / (1024**3), 1),
+                            "backend": "ROCm"
+                        }
+    except Exception:
+        pass
+
+    # Fallback to NVIDIA nvidia-smi
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,nounits,noheader"],
+            capture_output=True, text=True, timeout=2
+        )
+        if result.returncode == 0:
+            lines = result.stdout.strip().split("\n")
+            if lines:
+                used_mb, total_mb = map(float, lines[0].split(","))
+                return {
+                    "vendor": "NVIDIA",
+                    "vram_used_gb": round(used_mb / 1024, 1),
+                    "vram_total_gb": round(total_mb / 1024, 1),
+                    "backend": "CUDA"
+                }
+    except Exception:
+        pass
+
+    return {
+        "vendor": "GPU",
+        "vram_used_gb": 0,
+        "vram_total_gb": 0,
+        "backend": "Unknown"
+    }
+
+
 @app.get("/", response_model=None)
 async def serve_frontend_root():
     if FRONTEND_HTML.exists():
