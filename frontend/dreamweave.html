@@ -2900,41 +2900,11 @@ async function sendMessage() {
         } else if (line.startsWith('data: ')) {
           try {
             const evt = JSON.parse(line.slice(6));
-            if (currentEvent === 'token' || evt.token !== undefined) {
-              // Live token streaming — append directly to a pre-built bubble
-              liveTokenBuffer += evt.token;
-              if (!liveAnswerEl) {
-                // Create a live streaming bubble on first token
-                const liveChat = document.getElementById('chatArea');
-                const liveAb = document.createElement('div');
-                liveAb.className = 'answer-block';
-                liveAb.id = 'liveStreamBlock';
-                liveAb.innerHTML = `
-                  <div class="answer-header">
-                    <div class="answer-header-left">
-                      <div class="answer-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7" opacity="0.5"/></svg>Dreamweave Answer</div>
-                      <span class="confidence-chip med" id="liveConfChip">streaming…</span>
-                    </div>
-                    <span class="answer-time" id="liveTimeEl">streaming</span>
-                  </div>
-                  <div class="answer-body"><p class="answer-text magic-typing-cursor" id="liveAnswerText"></p></div>`;
-                liveChat.appendChild(liveAb);
-                liveAnswerEl = document.getElementById('liveAnswerText');
-              }
-              if (liveAnswerEl) liveAnswerEl.textContent = liveTokenBuffer;
-              chat.scrollTop = chat.scrollHeight;
-            } else if (evt.l1_surface !== undefined) {
+            if (evt.l1_surface !== undefined) {
               layersData = evt;
             } else if (evt.answer !== undefined) {
               answerText = evt.answer;
               finalData = evt;
-              // If we were streaming tokens, remove the live block (renderAnswer will create the real one)
-              if (liveAnswerEl) {
-                const lb = document.getElementById('liveStreamBlock');
-                if (lb) lb.remove();
-                liveAnswerEl = null;
-                liveTokenBuffer = '';
-              }
             }
           } catch(e) {}
         }
@@ -3236,17 +3206,44 @@ function renderAnswer(data, onDone) {
   
   if (formatted.isHtml) {
     answerEl.innerHTML = formatted.html;
+    ab.appendChild(metaDiv);
+    void metaDiv.offsetWidth;
+    metaDiv.style.opacity = '1';
+    if (!userScrolled) chat.scrollTop = chat.scrollHeight;
+    chat.removeEventListener('scroll', scrollGuard);
+    if (onDone) onDone();
   } else {
-    answerEl.textContent = formatted.text;
+    // Strip markdown symbols and extra newlines to make it clean as requested
+    const fullText = formatted.text.replace(/[*#`_]/g, '').replace(/\n{3,}/g, '\n\n').trim();
+    let charIndex = 0;
+    answerEl.classList.add('magic-typing-cursor');
+    
+    function typeChar() {
+      if (charIndex < fullText.length) {
+        answerEl.textContent = fullText.substring(0, charIndex + 1);
+        charIndex++;
+        if (charIndex === Math.floor(fullText.length / 2)) {
+          ab.appendChild(metaDiv);
+          void metaDiv.offsetWidth;
+          metaDiv.style.opacity = '1';
+        }
+        if (!userScrolled) chat.scrollTop = chat.scrollHeight;
+        typingTimer = setTimeout(typeChar, 18);
+      } else {
+        answerEl.classList.remove('magic-typing-cursor');
+        if (!ab.contains(metaDiv)) {
+          ab.appendChild(metaDiv);
+          void metaDiv.offsetWidth;
+          metaDiv.style.opacity = '1';
+        }
+        if (!userScrolled) chat.scrollTop = chat.scrollHeight;
+        chat.removeEventListener('scroll', scrollGuard);
+        if (onDone) onDone();
+      }
+    }
+    typeChar();
   }
   
-  ab.appendChild(metaDiv);
-  void metaDiv.offsetWidth;
-  metaDiv.style.opacity = '1';
-  if (!userScrolled) chat.scrollTop = chat.scrollHeight;
-  chat.removeEventListener('scroll', scrollGuard);
-  if (onDone) onDone();
-
   // Kick log with severity color coding
   if (kickSeverity === 'halted') {
     document.body.classList.add('kick-flash');

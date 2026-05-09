@@ -184,7 +184,6 @@ async def retrieve_stream(req: QueryRequest) -> StreamingResponse:
                     async for token in stream_llm_tokens(prompt, req.query, req.max_tokens):
                         streamed += token
                         yield sse("token", {"token": token})
-                        await asyncio.sleep(0.03)  # Slow down generation for a smooth UI typing effect
                     answer = streamed if streamed else build_retrieval_answer(req.query, context)
                 except Exception:
                     answer = await call_llm(prompt, req.query, req.max_tokens, context)
