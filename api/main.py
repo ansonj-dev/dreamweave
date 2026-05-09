@@ -43,6 +43,10 @@ class QueryRequest(BaseModel):
     kick_enabled: bool = True
 
 
+class NodeExpandRequest(BaseModel):
+    label: str = Field(..., min_length=1)
+
+
 class UrlIngestRequest(BaseModel):
     url: str = Field(..., min_length=8)
     source: str = "url"
@@ -193,6 +197,42 @@ async def retrieve_stream(req: QueryRequest) -> StreamingResponse:
                 confidence = max(0.0, round(1.0 - divergence, 2))
             latency_ms = int((time.perf_counter() - started) * 1000)
             yield sse("answer", {"answer": answer, "latency_ms": latency_ms, "confidence": confidence})
+            yield sse("done", {"status": "complete"})
+        except Exception as exc:
+            yield sse("error", {"message": str(exc)})
+
+    return StreamingResponse(events(), media_type="text/event-stream")
+
+
+@app.post("/node/expand")
+async def node_expand(req: NodeExpandRequest) -> StreamingResponse:
+    async def events():
+        try:
+            dw = get_orchestrator()
+            # 1. Search L1 for the origin of this concept
+            results = dw.l1.search(req.label, top_k=1)
+            chunk = results[0] if results else None
+            
+            # 2. Yield origin info
+            if chunk:
+                yield sse("origin", {"source": chunk.get("source", "Unknown"), "score": chunk.get("score", 0)})
+            else:
+                yield sse("origin", {"source": "Graph Inference", "score": 1.0})
+
+            # 3. Stream LLM explanation
+            prompt_context = f"Context: {chunk.get('text', '')}" if chunk else "No additional context available."
+            system_prompt = (
+                f"You are the DREAMWEAVE memory core. Briefly define or explain the concept '{req.label}' "
+                f"in exactly 1 or 2 short sentences based on this context. DO NOT use markdown, asterisks, or formatting. "
+                f"\n\n{prompt_context}"
+            )
+            
+            async for token in stream_llm_tokens(system_prompt, req.label, 150):
+                # Clean basic markdown tokens on the fly just in case
+                token = token.replace("*", "").replace("#", "").replace("_", "").replace("`", "")
+                if token:
+                    yield sse("token", {"token": token})
+            
             yield sse("done", {"status": "complete"})
         except Exception as exc:
             yield sse("error", {"message": str(exc)})

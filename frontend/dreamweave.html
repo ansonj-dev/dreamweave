@@ -2179,12 +2179,13 @@ function handleGraphClick(e) {
 }
 
 function showNodePopup(node, x, y) {
-  // Remove existing popup
+  // Remove existing popup and cancel any active stream
+  if (currentPopupAbortController) {
+    currentPopupAbortController.abort();
+    currentPopupAbortController = null;
+  }
   const existing = document.getElementById('graphPopup');
   if (existing) existing.remove();
-  
-  // Node descriptions (max 50 words)
-  const desc = node.label + " - Part of the knowledge graph.";
   
   // Create popup
   const popup = document.createElement('div');
@@ -2197,7 +2198,7 @@ function showNodePopup(node, x, y) {
     border: 1px solid ${node.color};
     border-radius: 8px;
     padding: 12px 14px;
-    max-width: 240px;
+    max-width: 280px;
     color: var(--text-primary);
     font-size: 11px;
     line-height: 1.5;
@@ -2210,11 +2211,12 @@ function showNodePopup(node, x, y) {
   popup.innerHTML = `
     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(139,154,181,0.2);">
       <div style="width: 8px; height: 8px; border-radius: 50%; background: ${node.color}; box-shadow: 0 0 8px ${node.glow};"></div>
-      <div style="font-weight: 600; font-size: 12px; color: ${node.color};">${node.label.replace('\n', ' ')}</div>
+      <div style="font-weight: 600; font-size: 12px; color: ${node.color}; flex: 1;">${node.label.replace('\n', ' ')}</div>
     </div>
-    <div id="popupText" style="color: var(--text-secondary);"></div>
-    <div style="margin-top: 10px; text-align: center;">
-      <button onclick="document.getElementById('graphPopup').remove()" style="background: ${node.color}22; border: 1px solid ${node.color}; color: ${node.color}; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Close</button>
+    <div id="popupOrigin" style="font-size: 10px; color: var(--text-muted); margin-bottom: 6px; display: none;"></div>
+    <div id="popupText" class="magic-typing-cursor" style="color: var(--text-secondary); min-height: 40px;">Generating...</div>
+    <div style="margin-top: 10px; text-align: right;">
+      <button onclick="if(currentPopupAbortController) currentPopupAbortController.abort(); document.getElementById('graphPopup').remove()" style="background: ${node.color}22; border: 1px solid ${node.color}; color: ${node.color}; padding: 4px 12px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Close</button>
     </div>
   `;
   
@@ -2226,24 +2228,63 @@ function showNodePopup(node, x, y) {
   } else {
     document.body.appendChild(popup);
   }
-  
-  // Typing effect
+  // Stream LLM explanation and origin
+  currentPopupAbortController = new AbortController();
   const textEl = document.getElementById('popupText');
-  let charIndex = 0;
-  
-  function typeChar() {
-    if (charIndex < desc.length) {
-      textEl.textContent = desc.substring(0, charIndex + 1);
-      charIndex++;
-      setTimeout(typeChar, 15); // Speed of typing
+  const originEl = document.getElementById('popupOrigin');
+  let tokenBuffer = '';
+
+  fetch(`${API_BASE}/node/expand`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label: node.label.replace('\n', ' ') }),
+    signal: currentPopupAbortController.signal
+  }).then(async res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      let currentEvent = '';
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          try {
+            const evt = JSON.parse(line.slice(6));
+            if (currentEvent === 'origin' || evt.source) {
+               originEl.style.display = 'block';
+               originEl.innerHTML = `<strong>Source:</strong> ${evt.source} <span style="opacity:0.7">(${(evt.score*100).toFixed(1)}%)</span>`;
+            } else if (currentEvent === 'token' || evt.token !== undefined) {
+               if (tokenBuffer === '') textEl.textContent = ''; // clear 'Generating...'
+               tokenBuffer += evt.token;
+               textEl.textContent = tokenBuffer;
+            } else if (currentEvent === 'done' || evt.status === 'complete') {
+               textEl.classList.remove('magic-typing-cursor');
+            }
+          } catch(e) {}
+        }
+      }
     }
-  }
-  typeChar();
+    textEl.classList.remove('magic-typing-cursor');
+  }).catch(err => {
+    if (err.name !== 'AbortError') {
+      textEl.textContent = "Failed to load memory context.";
+      textEl.classList.remove('magic-typing-cursor');
+    }
+  });
   
   // Close on outside click
   setTimeout(() => {
     const closeOnOutside = (e) => {
       if (!popup.contains(e.target)) {
+        if (currentPopupAbortController) currentPopupAbortController.abort();
         popup.remove();
         document.removeEventListener('click', closeOnOutside);
       }
