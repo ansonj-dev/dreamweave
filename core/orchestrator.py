@@ -200,6 +200,13 @@ class DreamWeaveOrchestrator:
         self._auto_save()
         return {"status": "cleared", "l1_stats": self.l1.stats(), "graph_stats": self.l2.stats()}
 
+    def delete_source(self, source: str) -> dict[str, Any]:
+        l1_chunks = self.l1.delete_source(source)
+        if source in self.sources:
+            del self.sources[source]
+        self._auto_save()
+        return {"status": "deleted", "source": source, "chunks_deleted": l1_chunks}
+
     def save_memory(self, path: str | None = None) -> dict[str, Any]:
         target = Path(path) if path else self.memory_dir / "dreamweave_memory.json"
         target.parent.mkdir(parents=True, exist_ok=True)

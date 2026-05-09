@@ -2358,7 +2358,20 @@ async function openAllSources() {
       const chunks = s.chunks || s.chunk_count || 0;
       const depth = s.avg_depth_score !== undefined ? s.avg_depth_score.toFixed(2) : (s.depth || '—');
       const chars = s.characters ? (s.characters / 1024).toFixed(1) + ' KB' : '';
-      return `<div class="source-list-item"><div class="source-icon ${cls}" style="width:36px;height:36px;font-size:11px">${ext}</div><div class="source-info"><div class="source-name">${name}</div><div class="source-meta">${ext}${chars ? ' · ' + chars : ''}</div></div><div class="source-stats"><div class="source-stat">${chunks} chunks</div><div class="source-stat">depth ${depth}</div></div></div>`;
+      return `<div class="source-list-item">
+        <div class="source-icon ${cls}" style="width:36px;height:36px;font-size:11px">${ext}</div>
+        <div class="source-info">
+          <div class="source-name">${name}</div>
+          <div class="source-meta">${ext}${chars ? ' · ' + chars : ''}</div>
+        </div>
+        <div class="source-stats">
+          <div class="source-stat">${chunks} chunks</div>
+          <div class="source-stat">depth ${depth}</div>
+        </div>
+        <button class="btn-icon" style="margin-left:10px;color:var(--kick-color);" onclick="deleteSource('${name.replace(/'/g, "\\'")}', event)" title="Delete Source">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+        </button>
+      </div>`;
     }).join('');
   } catch(e) { list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Failed to load sources.</div>'; }
 }
@@ -2488,13 +2501,44 @@ function addSourceToSidebar(src, byteLen) {
   const iconClass = ext === 'PDF' ? 'pdf' : ext === 'MD' ? 'md' : 'txt';
   const item = document.createElement('div');
   item.className = 'source-item';
+  // set data-source so we can remove it easily
+  item.setAttribute('data-source', src);
   item.innerHTML = `
     <div class="source-icon ${iconClass}">${ext}</div>
-    <div class="source-info">
+    <div class="source-info" style="flex:1">
       <div class="source-name">${src}</div>
       <div class="source-meta">${ext}${byteLen ? ' · ' + (byteLen/1024).toFixed(1) + ' KB' : ''}</div>
-    </div>`;
+    </div>
+    <button class="btn-icon" style="color:var(--text-muted);" onclick="deleteSource('${src.replace(/'/g, "\\'")}', event)" title="Delete Source">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+    </button>`;
   list.insertBefore(item, list.firstChild);
+}
+
+async function deleteSource(sourceName, event) {
+  if (event) event.stopPropagation();
+  if (!confirm(`Delete source "${sourceName}"?`)) return;
+  try {
+    const res = await fetch(`${API_BASE}/sources/${encodeURIComponent(sourceName)}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(await res.text());
+    showToast(`Deleted ${sourceName}`, 'success');
+    
+    // Remove from sidebar if exists
+    const sidebarItems = document.querySelectorAll('#sourceList .source-item');
+    sidebarItems.forEach(item => {
+      if (item.getAttribute('data-source') === sourceName) {
+        item.remove();
+      }
+    });
+
+    // Refresh modals/graph if open
+    if (document.getElementById('allSourcesModal').classList.contains('open')) {
+      openAllSources();
+    }
+    refreshGraph();
+  } catch (e) {
+    showToast('Failed to delete: ' + e.message, 'error');
+  }
 }
 
 function handleInputKey(e) {

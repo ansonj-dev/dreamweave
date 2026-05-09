@@ -270,6 +270,14 @@ async def sources() -> list[dict[str, Any]]:
     return get_orchestrator().list_sources()
 
 
+@app.delete("/sources/{source_id:path}")
+async def delete_source(source_id: str) -> dict[str, Any]:
+    try:
+        return get_orchestrator().delete_source(source_id)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Source deletion failed: {exc}") from exc
+
+
 @app.post("/memory/save")
 async def save_memory(req: MemoryPathRequest | None = None) -> dict[str, Any]:
     try:

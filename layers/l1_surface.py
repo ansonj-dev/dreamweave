@@ -210,3 +210,21 @@ class L1SurfaceEngine:
         if point_structs:
             self.client.upsert(collection_name=self.COLLECTION_NAME, points=point_structs)
         return len(point_structs)
+
+    def delete_source(self, source: str) -> int:
+        count_before = self.client.count(collection_name=self.COLLECTION_NAME, exact=True).count
+        self.client.delete(
+            collection_name=self.COLLECTION_NAME,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="source",
+                            match=models.MatchValue(value=source),
+                        )
+                    ]
+                )
+            ),
+        )
+        count_after = self.client.count(collection_name=self.COLLECTION_NAME, exact=True).count
+        return count_before - count_after
