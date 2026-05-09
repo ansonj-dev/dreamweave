@@ -1669,8 +1669,9 @@
 
       <!-- Layer View -->
       <div class="viz-pane" id="pane-layer">
-        <div class="layer-view-content">
-          <div class="lv-layer">
+        <div class="layer-view-content" id="layerViewContent">
+          <div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:12px;">Ask a question to see layer data</div>
+          <div class="lv-layer" style="display:none">
             <div class="lv-header">
               <div class="lv-title-row">
                 <div class="lv-dot" style="background:var(--l1-color)"></div>
@@ -1742,8 +1743,8 @@
 
       <!-- Path View -->
       <div class="viz-pane" id="pane-path">
-        <div class="path-view-content">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;font-family:'JetBrains Mono',monospace;">Query path: "misinformation campaigns spread online"</div>
+        <div class="path-view-content" id="pathViewContent">
+          <div id="pathViewPlaceholder" style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:12px;">Ask a question to see retrieval path</div>
           <div class="path-node">
             <div class="path-node-left">
               <div class="path-circle" style="background:rgba(59,130,246,0.15);color:var(--l1-color);border:1px solid rgba(59,130,246,0.3)">L1</div>
@@ -1835,7 +1836,7 @@
         <span class="kick-log-link" onclick="openAllLogs()">View All Logs →</span>
       </div>
       <div class="kick-log-entries" id="kickLog">
-        <div class="kick-log-entry">
+        <div class="kick-log-entry" style="display:none">
           <div class="kick-log-dot" style="background:var(--kick-color)"></div>
           <span class="kick-log-time">12:45:22</span>
           <span class="kick-log-text"><strong>Kick triggered:</strong> Conflict between surface data and structural pattern detected</span>
@@ -1912,37 +1913,8 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <div class="source-list-modal">
-      <div class="source-list-item">
-        <div class="source-icon pdf" style="width:36px;height:36px;font-size:11px">PDF</div>
-        <div class="source-info"><div class="source-name">climate_change.pdf</div><div class="source-meta">PDF · 12.4 MB</div></div>
-        <div class="source-stats"><div class="source-stat">47 chunks</div><div class="source-stat">depth 0.72</div></div>
-      </div>
-      <div class="source-list-item">
-        <div class="source-icon md" style="width:36px;height:36px;font-size:11px">MD</div>
-        <div class="source-info"><div class="source-name">wildfire_research.md</div><div class="source-meta">MD · 0.7 KB</div></div>
-        <div class="source-stats"><div class="source-stat">3 chunks</div><div class="source-stat">depth 0.21</div></div>
-      </div>
-      <div class="source-list-item">
-        <div class="source-icon pdf" style="width:36px;height:36px;font-size:11px">PDF</div>
-        <div class="source-info"><div class="source-name">urban_planning.pdf</div><div class="source-meta">PDF · 5.1 MB</div></div>
-        <div class="source-stats"><div class="source-stat">21 chunks</div><div class="source-stat">depth 0.55</div></div>
-      </div>
-      <div class="source-list-item">
-        <div class="source-icon txt" style="width:36px;height:36px;font-size:11px">TXT</div>
-        <div class="source-info"><div class="source-name">social_dynamics.txt</div><div class="source-meta">TXT · 2.3 KB</div></div>
-        <div class="source-stats"><div class="source-stat">9 chunks</div><div class="source-stat">depth 0.62</div></div>
-      </div>
-      <div class="source-list-item">
-        <div class="source-icon pdf" style="width:36px;height:36px;font-size:11px">PDF</div>
-        <div class="source-info"><div class="source-name">misinformation_study.pdf</div><div class="source-meta">PDF · 3.2 MB</div></div>
-        <div class="source-stats"><div class="source-stat">14 chunks</div><div class="source-stat">depth 0.71</div></div>
-      </div>
-      <div class="source-list-item">
-        <div class="source-icon txt" style="width:36px;height:36px;font-size:11px">TXT</div>
-        <div class="source-info"><div class="source-name">network_effects.pdf</div><div class="source-meta">PDF · 1.8 MB</div></div>
-        <div class="source-stats"><div class="source-stat">8 chunks</div><div class="source-stat">depth 0.48</div></div>
-      </div>
+    <div class="source-list-modal" id="allSourcesList">
+      <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Loading sources…</div>
     </div>
   </div>
 </div>
@@ -1958,15 +1930,8 @@
     </div>
     <canvas class="graph-explore-canvas" id="exploreCanvas" width="512" height="320"></canvas>
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Top entities by graph weight:</div>
-    <div class="ge-entity-list">
-      <div class="ge-entity"><span class="ge-entity-name">Social Media Platforms</span><span class="ge-entity-weight">w: 14</span></div>
-      <div class="ge-entity"><span class="ge-entity-name">Algorithmic Amplification</span><span class="ge-entity-weight">w: 11</span></div>
-      <div class="ge-entity"><span class="ge-entity-name">Information Diffusion</span><span class="ge-entity-weight">w: 9</span></div>
-      <div class="ge-entity"><span class="ge-entity-name">Echo Chamber</span><span class="ge-entity-weight">w: 8</span></div>
-      <div class="ge-entity"><span class="ge-entity-name">Psychological Triggers</span><span class="ge-entity-weight">w: 7</span></div>
-      <div class="ge-entity"><span class="ge-entity-name">Engagement</span><span class="ge-entity-weight">w: 6</span></div>
-      <div class="ge-entity"><span class="ge-entity-name">Virality</span><span class="ge-entity-weight">w: 5</span></div>
-      <div class="ge-entity"><span class="ge-entity-name">Misinformation Campaigns</span><span class="ge-entity-weight">w: 4</span></div>
+    <div class="ge-entity-list" id="geEntityList">
+      <div style="padding:10px;text-align:center;color:var(--text-muted);font-size:12px;">Loading graph…</div>
     </div>
   </div>
 </div>
@@ -2389,73 +2354,72 @@ function drawGraph(canvas) {
   graphAnimId = requestAnimationFrame(() => drawGraph(canvas));
 }
 
-// Explore canvas (in modal)
-function drawExploreGraph() {
+// Explore canvas — draws from real graph data
+function drawExploreCanvasNodes(nodes2, edges2) {
   const canvas = document.getElementById('exploreCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
-
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle = '#111827';
   ctx.fillRect(0,0,W,H);
-
-  const nodes2 = [
-    { label: 'Misinformation', x: W/2, y: H/2, r: 28, color: '#9d5cf6' },
-    { label: 'Social Media', x: W*0.25, y: H*0.3, r: 20, color: '#14b8a6' },
-    { label: 'Algorithm', x: W*0.5, y: H*0.15, r: 16, color: '#f59e0b' },
-    { label: 'Echo Chamber', x: W*0.75, y: H*0.3, r: 18, color: '#3b82f6' },
-    { label: 'Engagement', x: W*0.2, y: H*0.65, r: 14, color: '#f59e0b' },
-    { label: 'Virality', x: W*0.5, y: H*0.82, r: 14, color: '#ec4899' },
-    { label: 'Network Effect', x: W*0.8, y: H*0.65, r: 14, color: '#3b82f6' },
-    { label: 'Fear', x: W*0.85, y: H*0.12, r: 10, color: '#ec4899' },
-    { label: 'Bias', x: W*0.12, y: H*0.12, r: 10, color: '#a78bfa' },
-  ];
-  const edges2 = [[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[1,2],[1,8],[3,7],[4,5],[5,6]];
-
   edges2.forEach(([a,b]) => {
-    ctx.save();
-    ctx.globalAlpha = 0.3;
-    ctx.beginPath();
-    ctx.moveTo(nodes2[a].x, nodes2[a].y);
-    ctx.lineTo(nodes2[b].x, nodes2[b].y);
-    ctx.strokeStyle = '#4a5a78';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.restore();
+    if (!nodes2[a] || !nodes2[b]) return;
+    ctx.save(); ctx.globalAlpha = 0.3;
+    ctx.beginPath(); ctx.moveTo(nodes2[a].x, nodes2[a].y); ctx.lineTo(nodes2[b].x, nodes2[b].y);
+    ctx.strokeStyle = '#4a5a78'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
   });
-
   nodes2.forEach(n => {
     const grd = ctx.createRadialGradient(n.x, n.y, n.r*0.2, n.x, n.y, n.r*1.8);
-    grd.addColorStop(0, n.color+'44');
-    grd.addColorStop(1, n.color+'00');
-    ctx.save();
-    ctx.globalAlpha = 0.6;
-    ctx.beginPath();
-    ctx.arc(n.x, n.y, n.r*1.8, 0, Math.PI*2);
-    ctx.fillStyle = grd;
-    ctx.fill();
-    ctx.restore();
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
-    ctx.fillStyle = n.color+'22';
-    ctx.fill();
-    ctx.strokeStyle = n.color;
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.9;
-    ctx.stroke();
-    ctx.restore();
-
-    ctx.save();
-    ctx.fillStyle = '#e8edf5';
+    grd.addColorStop(0, n.color+'44'); grd.addColorStop(1, n.color+'00');
+    ctx.save(); ctx.globalAlpha = 0.6;
+    ctx.beginPath(); ctx.arc(n.x, n.y, n.r*1.8, 0, Math.PI*2);
+    ctx.fillStyle = grd; ctx.fill(); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+    ctx.fillStyle = n.color+'22'; ctx.fill();
+    ctx.strokeStyle = n.color; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.9; ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.fillStyle = '#e8edf5';
     ctx.font = `bold ${Math.max(7, n.r*0.4)}px 'Space Grotesk', sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(n.label, n.x, n.y);
-    ctx.restore();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(n.label.length > 12 ? n.label.slice(0,12)+'…' : n.label, n.x, n.y); ctx.restore();
   });
+}
+
+function drawExploreGraphFromData(g) {
+  const colors = ['#9d5cf6','#14b8a6','#f59e0b','#3b82f6','#ec4899','#ef4444','#60a5fa','#a78bfa'];
+  const canvas = document.getElementById('exploreCanvas');
+  if (!canvas) return;
+  const W = canvas.width, H = canvas.height;
+  const rawNodes = (g.nodes || []).slice(0, 20);
+  const nodes2 = rawNodes.map((n, i) => ({
+    label: n.id || n.entity || n.label || `N${i}`,
+    x: W * (0.1 + (i % 5) * 0.2),
+    y: H * (0.15 + Math.floor(i / 5) * 0.28),
+    r: Math.max(10, Math.min(30, (n.weight || 1) * 4)),
+    color: colors[i % colors.length]
+  }));
+  const idxMap = {};
+  nodes2.forEach((n, i) => idxMap[n.label] = i);
+  const edges2 = (g.edges || []).slice(0, 40).map(e => {
+    const a = idxMap[e.source] ?? -1;
+    const b = idxMap[e.target] ?? -1;
+    return [a, b];
+  }).filter(([a,b]) => a >= 0 && b >= 0 && a !== b);
+  drawExploreCanvasNodes(nodes2, edges2);
+}
+
+function drawExploreGraph() {
+  // Empty state — show placeholder grid
+  const canvas = document.getElementById('exploreCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#111827'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = 'rgba(139,154,181,0.3)';
+  ctx.font = '12px Space Grotesk, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Ingest documents to populate graph', W/2, H/2);
 }
 
 // ═══════════════════════════════════════════════
@@ -2480,7 +2444,8 @@ function switchVizTab(el, pane) {
 
 let kickOn = false;
 let kickFiredCount = 0;
-let currentStreamReader = null; // Track the current stream reader for cancellation
+let currentStreamReader = null;
+let currentAbortController = null;
 
 function toggleKick() {
   kickOn = !kickOn;
@@ -2534,10 +2499,41 @@ function switchIngestTab(tab) {
   }
 }
 
-function openAllSources() { openModal('allSourcesModal'); }
-function openGraphExplorer() {
+async function openAllSources() {
+  openModal('allSourcesModal');
+  const list = document.getElementById('allSourcesList');
+  try {
+    const res = await fetch(`${API_BASE}/sources`);
+    if (!res.ok) throw new Error();
+    const sources = await res.json();
+    if (!sources.length) { list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">No sources ingested yet.</div>'; return; }
+    list.innerHTML = sources.map(s => {
+      const name = s.source || s.name || 'Unknown';
+      const ext = name.split('.').pop().toUpperCase();
+      const cls = ext === 'PDF' ? 'pdf' : ext === 'MD' ? 'md' : 'txt';
+      const chunks = s.chunks || s.chunk_count || 0;
+      const depth = s.avg_depth_score !== undefined ? s.avg_depth_score.toFixed(2) : (s.depth || '—');
+      const chars = s.characters ? (s.characters / 1024).toFixed(1) + ' KB' : '';
+      return `<div class="source-list-item"><div class="source-icon ${cls}" style="width:36px;height:36px;font-size:11px">${ext}</div><div class="source-info"><div class="source-name">${name}</div><div class="source-meta">${ext}${chars ? ' · ' + chars : ''}</div></div><div class="source-stats"><div class="source-stat">${chunks} chunks</div><div class="source-stat">depth ${depth}</div></div></div>`;
+    }).join('');
+  } catch(e) { list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Failed to load sources.</div>'; }
+}
+async function openGraphExplorer() {
   openModal('graphModal');
-  setTimeout(drawExploreGraph, 100);
+  try {
+    const res = await fetch(`${API_BASE}/graph`);
+    if (!res.ok) throw new Error();
+    const g = await res.json();
+    const entityList = document.getElementById('geEntityList');
+    if (g.nodes && g.nodes.length) {
+      const sorted = [...g.nodes].sort((a,b) => (b.weight||1)-(a.weight||1));
+      entityList.innerHTML = sorted.slice(0,15).map(n => `<div class="ge-entity"><span class="ge-entity-name">${n.id||n.entity||n.label}</span><span class="ge-entity-weight">w: ${n.weight||1}</span></div>`).join('');
+      drawExploreGraphFromData(g);
+    } else {
+      entityList.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text-muted);font-size:12px;">No graph data. Ingest documents first.</div>';
+      drawExploreGraph();
+    }
+  } catch(e) { drawExploreGraph(); }
 }
 async function showMemoryLayers() {
   openModal('memoryLayersModal');
@@ -2694,11 +2690,13 @@ async function sendMessage() {
   const started = Date.now();
   let layersData = null;
 
+  currentAbortController = new AbortController();
   try {
     const res = await fetch(`${API_BASE}/retrieve/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: q, kick_enabled: kickOn, generate_answer: true, max_tokens: 600 })
+      body: JSON.stringify({ query: q, kick_enabled: kickOn, generate_answer: true, max_tokens: 600 }),
+      signal: currentAbortController.signal
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -2727,7 +2725,8 @@ async function sendMessage() {
       }
     }
 
-    currentStreamReader = null; // Clear after completion
+    currentStreamReader = null;
+    currentAbortController = null;
     typing.classList.remove('show');
     // Reset layer status chips
     document.querySelectorAll('.layer-status').forEach((el, i) => {
@@ -2738,12 +2737,15 @@ async function sendMessage() {
     if (layersData) {
       const mapped = buildRenderData(layersData, answerText, elapsed);
       renderAnswer(mapped);
+      updateLayerView(layersData, q);
+      updatePathView(layersData, q, elapsed);
       refreshGraph();
     } else {
       showToast('No results — ingest some documents first', 'error');
     }
   } catch(err) {
-    currentStreamReader = null; // Clear on error
+    currentStreamReader = null;
+    currentAbortController = null;
     typing.classList.remove('show');
     // Reset layer status chips
     document.querySelectorAll('.layer-status').forEach((el, i) => {
@@ -2760,25 +2762,71 @@ async function sendMessage() {
 }
 
 function stopGeneration() {
-  if (currentStreamReader) {
-    currentStreamReader.cancel(); // Cancel the stream
-    currentStreamReader = null;
-    
-    const typing = document.getElementById('typingIndicator');
-    typing.classList.remove('show');
-    
-    // Reset layer status chips
-    document.querySelectorAll('.layer-status').forEach((el, i) => {
-      if (i < 3) { el.textContent = 'IDLE'; el.classList.remove('active'); el.classList.add('idle'); }
-    });
-    
-    // Restore buttons
-    document.getElementById('sendBtn').classList.remove('hidden');
-    document.getElementById('stopBtn').classList.remove('show');
-    
-    showToast('Generation stopped', 'success');
-    addKickLog('f59e0b', 'Generation stopped by user');
+  if (currentAbortController) {
+    currentAbortController.abort();
+    currentAbortController = null;
   }
+  if (currentStreamReader) {
+    try { currentStreamReader.cancel(); } catch(e) {}
+    currentStreamReader = null;
+  }
+  const typing = document.getElementById('typingIndicator');
+  typing.classList.remove('show');
+  document.querySelectorAll('.layer-status').forEach((el, i) => {
+    if (i < 3) { el.textContent = 'IDLE'; el.classList.remove('active'); el.classList.add('idle'); }
+  });
+  document.getElementById('sendBtn').classList.remove('hidden');
+  document.getElementById('stopBtn').classList.remove('show');
+  showToast('Generation stopped', 'success');
+  addKickLog('f59e0b', 'Generation stopped by user');
+}
+
+function updateLayerView(ctx, query) {
+  const lvc = document.getElementById('layerViewContent');
+  if (!lvc) return;
+  const l1 = ctx.l1_surface || [];
+  const l2 = ctx.l2_associative || [];
+  const l3 = ctx.l3_structural || [];
+  const kick = ctx.kick || {};
+  const topScore = l1[0] ? (l1[0].score || 0).toFixed(2) : '—';
+  const l1Sources = [...new Set(l1.map(c => c.source).filter(Boolean))];
+  const l1Entries = l1.slice(0,3).map(c => `<div class="lv-entry"><svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>${c.source || 'chunk'} — score ${(c.score||0).toFixed(3)}</div>`).join('');
+  const l2Entries = l2.slice(0,3).map(r => `<div class="lv-entry"><svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4"/></svg>${r.path || r.entity || JSON.stringify(r).slice(0,60)}</div>`).join('');
+  const l3Top = l3[0] || {};
+  const l3Name = l3Top.name || l3Top.schema || '—';
+  const l3Conf = ((l3Top.confidence || l3Top.score || 0) * 100).toFixed(0);
+  const l3Entries = l3.slice(0,2).map(p => `<div class="lv-entry"><svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>${(p.name||p.schema||'pattern').replace(/_/g,' ')} — ${((p.confidence||p.score||0)*100).toFixed(0)}%</div>`).join('');
+  const l1pct = Math.min(100, Math.round((l1.length / 10) * 100));
+  const l2pct = Math.min(100, Math.round((l2.length / 20) * 100));
+  const l3pct = l3Top.confidence ? Math.round(l3Top.confidence * 100) : (l3.length ? 50 : 0);
+  const kicked = kick.severity && kick.severity !== 'none';
+  const kickInfo = kicked ? `<div class="lv-layer" style="border-color:rgba(239,68,68,0.3)"><div class="lv-header"><div class="lv-title-row"><div class="lv-dot" style="background:var(--kick-color)"></div><span class="lv-title" style="color:var(--kick-color)">Kick — Conflict Detected</span></div><span class="lv-score">${(kick.divergence||0).toFixed(3)}</span></div><div class="lv-desc">Divergence ${kick.divergence||0} > threshold ${kick.threshold||0.42}. ${kick.message||''}</div><div class="lv-bar-wrap"><div class="lv-bar" style="width:${Math.min(100,Math.round((kick.divergence||0)*200))}%;background:var(--kick-color)"></div></div></div>` : '';
+  lvc.innerHTML = `
+    <div class="lv-layer"><div class="lv-header"><div class="lv-title-row"><div class="lv-dot" style="background:var(--l1-color)"></div><span class="lv-title" style="color:var(--l1-color)">L1 Surface — Vector Search</span></div><span class="lv-score">${topScore}</span></div><div class="lv-desc">${l1.length} chunks retrieved from ${l1Sources.length || '?'} source(s). Top score: ${topScore}.</div><div class="lv-bar-wrap"><div class="lv-bar" style="width:${l1pct}%;background:var(--l1-color)"></div></div><div class="lv-entries">${l1Entries || '<div class="lv-entry">No L1 results</div>'}</div></div>
+    <div class="lv-layer"><div class="lv-header"><div class="lv-title-row"><div class="lv-dot" style="background:var(--l2-color)"></div><span class="lv-title" style="color:var(--l2-color)">L2 Associative — Graph</span></div><span class="lv-score">${l2.length}</span></div><div class="lv-desc">${l2.length} graph relationships found.</div><div class="lv-bar-wrap"><div class="lv-bar" style="width:${l2pct}%;background:var(--l2-color)"></div></div><div class="lv-entries">${l2Entries || '<div class="lv-entry">No L2 paths</div>'}</div></div>
+    <div class="lv-layer"><div class="lv-header"><div class="lv-title-row"><div class="lv-dot" style="background:var(--l3-color)"></div><span class="lv-title" style="color:var(--l3-color)">L3 Structural — Pattern</span></div><span class="lv-score">${l3Conf}%</span></div><div class="lv-desc">Schema matched: <strong>${l3Name.replace(/_/g,' ')}</strong>${l3Conf ? ' ('+l3Conf+'% confidence)' : ''}.</div><div class="lv-bar-wrap"><div class="lv-bar" style="width:${l3pct}%;background:var(--l3-color)"></div></div><div class="lv-entries">${l3Entries || '<div class="lv-entry">No L3 patterns</div>'}</div></div>
+    ${kickInfo}`;
+}
+
+function updatePathView(ctx, query, elapsed) {
+  const pvc = document.getElementById('pathViewContent');
+  if (!pvc) return;
+  const l1 = ctx.l1_surface || [];
+  const l2 = ctx.l2_associative || [];
+  const l3 = ctx.l3_structural || [];
+  const kick = ctx.kick || {};
+  const kicked = kick.severity && kick.severity !== 'none';
+  const l1Top = l1[0] || {};
+  const l3Top = l3[0] || {};
+  const l2Entities = [...new Set(l1.map(c => c.source).filter(Boolean))].slice(0,3).join(', ') || '—';
+  const kickNode = kicked ? `<div class="path-node"><div class="path-node-left"><div class="path-circle" style="background:rgba(239,68,68,0.15);color:var(--kick-color);border:1px solid rgba(239,68,68,0.3)">⚡</div><div class="path-line"></div></div><div class="path-node-right"><div class="path-node-title" style="color:var(--kick-color)">Kick Re-rank</div><div class="path-node-desc">Divergence ${kick.divergence||0} exceeded threshold ${kick.threshold||0.42}. ${kick.message||'Re-ranking retrieval with structural context.'}</div><div class="path-node-tags"><span class="path-tag" style="background:rgba(239,68,68,0.1);color:var(--kick-color)">div ${(kick.divergence||0).toFixed(3)}</span><span class="path-tag" style="background:rgba(239,68,68,0.1);color:var(--kick-color)">${kick.severity||''}</span></div></div></div>` : '';
+  pvc.innerHTML = `
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;font-family:'JetBrains Mono',monospace;">Query: "${query}"</div>
+    <div class="path-node"><div class="path-node-left"><div class="path-circle" style="background:rgba(59,130,246,0.15);color:var(--l1-color);border:1px solid rgba(59,130,246,0.3)">L1</div><div class="path-line"></div></div><div class="path-node-right"><div class="path-node-title" style="color:var(--l1-color)">Vector Retrieval</div><div class="path-node-desc">${l1.length} chunks retrieved. Top match: ${l1Top.source||'—'} (score ${(l1Top.score||0).toFixed(3)}).</div><div class="path-node-tags"><span class="path-tag" style="background:rgba(59,130,246,0.1);color:var(--l1-color)">${(l1Top.score||0).toFixed(3)} score</span><span class="path-tag" style="background:rgba(59,130,246,0.1);color:var(--l1-color)">${l1.length} chunks</span></div></div></div>
+    <div class="path-node"><div class="path-node-left"><div class="path-circle" style="background:rgba(20,184,166,0.15);color:var(--l2-color);border:1px solid rgba(20,184,166,0.3)">L2</div><div class="path-line"></div></div><div class="path-node-right"><div class="path-node-title" style="color:var(--l2-color)">Graph Traversal</div><div class="path-node-desc">Sources: [${l2Entities}]. ${l2.length} relationships found.</div><div class="path-node-tags"><span class="path-tag" style="background:rgba(20,184,166,0.1);color:var(--l2-color)">${l2.length} edges</span></div></div></div>
+    <div class="path-node"><div class="path-node-left"><div class="path-circle" style="background:rgba(245,158,11,0.15);color:var(--l3-color);border:1px solid rgba(245,158,11,0.3)">L3</div><div class="path-line"></div></div><div class="path-node-right"><div class="path-node-title" style="color:var(--l3-color)">Pattern Match</div><div class="path-node-desc">Schema: ${(l3Top.name||l3Top.schema||'none').replace(/_/g,' ')}. Confidence: ${((l3Top.confidence||l3Top.score||0)*100).toFixed(0)}%.</div><div class="path-node-tags"><span class="path-tag" style="background:rgba(245,158,11,0.1);color:var(--l3-color)">${((l3Top.confidence||l3Top.score||0)*100).toFixed(0)}% match</span>${kicked?`<span class="path-tag" style="background:rgba(239,68,68,0.1);color:var(--kick-color)">KICK: ${(kick.divergence||0).toFixed(3)}</span>`:''}</div></div></div>
+    ${kickNode}
+    <div class="path-node"><div class="path-node-left"><div class="path-circle" style="background:rgba(124,58,237,0.15);color:#a78bfa;border:1px solid rgba(124,58,237,0.3)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div></div><div class="path-node-right"><div class="path-node-title" style="color:#a78bfa">LLM Generation</div><div class="path-node-desc">Response generated in ${elapsed} on AMD MI300X.</div><div class="path-node-tags"><span class="path-tag" style="background:rgba(124,58,237,0.1);color:#a78bfa">${elapsed}</span></div></div></div>`;
 }
 
 function buildRenderData(ctx, answer, timeStr) {
