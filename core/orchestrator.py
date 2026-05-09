@@ -204,6 +204,14 @@ class DreamWeaveOrchestrator:
         l1_chunks = self.l1.delete_source(source)
         if source in self.sources:
             del self.sources[source]
+
+        self.l2.clear()
+        if self.sources:
+            for point in self.l1.export_points():
+                text = point.get("payload", {}).get("text", "")
+                if text:
+                    self.l2.ingest(text)
+
         self._auto_save()
         return {"status": "deleted", "source": source, "chunks_deleted": l1_chunks}
 
