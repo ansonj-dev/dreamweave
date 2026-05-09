@@ -174,12 +174,25 @@ async def retrieve_stream(req: QueryRequest) -> StreamingResponse:
             context = dw.retrieve(req.query, kick_enabled=req.kick_enabled)
             yield sse("layers", context)
             answer = "Answer generation disabled"
+            confidence = 1.0
             if req.generate_answer:
                 yield sse("status", {"message": "Calling local LLM"})
                 prompt = dw.build_llm_context(context)
-                answer = await call_llm(prompt, req.query, req.max_tokens, context)
+                # Try token-by-token streaming first
+                streamed = ""
+                try:
+                    async for token in stream_llm_tokens(prompt, req.query, req.max_tokens):
+                        streamed += token
+                        yield sse("token", {"token": token})
+                    answer = streamed if streamed else build_retrieval_answer(req.query, context)
+                except Exception:
+                    answer = await call_llm(prompt, req.query, req.max_tokens, context)
+                # Compute confidence from kick divergence
+                kick = context.get("kick", {})
+                divergence = float(kick.get("divergence", 0.0))
+                confidence = max(0.0, round(1.0 - divergence, 2))
             latency_ms = int((time.perf_counter() - started) * 1000)
-            yield sse("answer", {"answer": answer, "latency_ms": latency_ms})
+            yield sse("answer", {"answer": answer, "latency_ms": latency_ms, "confidence": confidence})
             yield sse("done", {"status": "complete"})
         except Exception as exc:
             yield sse("error", {"message": str(exc)})
@@ -207,6 +220,36 @@ async def call_llm(context: str, query: str, max_tokens: int, retrieval_context:
         import logging
         logging.getLogger("dreamweave").warning(f"LLM call failed: {llm_err}")
         return build_retrieval_answer(query, retrieval_context)
+
+
+async def stream_llm_tokens(context: str, query: str, max_tokens: int):
+    """Yields individual tokens from vLLM streaming API."""
+    payload = {
+        "model": LLM_MODEL,
+        "messages": [
+            {"role": "system", "content": context},
+            {"role": "user", "content": query},
+        ],
+        "max_tokens": max_tokens,
+        "temperature": 0.3,
+        "stream": True,
+    }
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        async with client.stream("POST", LLM_URL, json=payload) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if line.startswith("data: "):
+                    chunk = line[6:].strip()
+                    if chunk == "[DONE]":
+                        break
+                    try:
+                        obj = json.loads(chunk)
+                        delta = obj["choices"][0].get("delta", {})
+                        token = delta.get("content", "")
+                        if token:
+                            yield token
+                    except Exception:
+                        continue
 
 
 @app.get("/health")
@@ -269,6 +312,59 @@ async def stats() -> dict:
         "kick_threshold": dw.kick.threshold,
         "schemas_count": len(dw.l3.list_schemas()),
     }
+
+
+@app.get("/metrics")
+async def metrics() -> dict:
+    """Live system metrics for the hackathon dashboard."""
+    dw = get_orchestrator()
+    l1 = dw.l1.stats()
+    g = dw.l2.stats()
+    return {
+        "l1_chunks": l1.get("total_chunks", 0),
+        "l2_nodes": g.get("nodes", 0),
+        "l2_edges": g.get("edges", 0),
+        "l3_schemas": len(dw.l3.list_schemas()),
+        "kick_threshold": dw.kick.threshold,
+        "sources_count": len(dw.list_sources()),
+    }
+
+
+@app.get("/gpu-stats")
+async def gpu_stats() -> dict:
+    """Returns AMD (ROCm) or NVIDIA GPU stats for the dashboard badge."""
+    import subprocess
+    # Try AMD ROCm first
+    try:
+        result = subprocess.run(
+            ["rocm-smi", "--showmeminfo", "vram", "--json"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            # rocm-smi JSON structure varies by version; try common keys
+            card = list(data.values())[0] if data else {}
+            vram_used = card.get("VRAM Total Used Memory (B)", card.get("vram_used", 0))
+            vram_total = card.get("VRAM Total Memory (B)", card.get("vram_total", 1))
+            used_gb = round(int(vram_used) / (1024**3), 1)
+            total_gb = round(int(vram_total) / (1024**3), 1)
+            return {"vendor": "AMD", "vram_used_gb": used_gb, "vram_total_gb": total_gb, "backend": "ROCm"}
+    except Exception:
+        pass
+    # Fallback: nvidia-smi
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            parts = result.stdout.strip().split(",")
+            used_gb = round(int(parts[0].strip()) / 1024, 1)
+            total_gb = round(int(parts[1].strip()) / 1024, 1)
+            return {"vendor": "NVIDIA", "vram_used_gb": used_gb, "vram_total_gb": total_gb, "backend": "CUDA"}
+    except Exception:
+        pass
+    return {"vendor": "GPU", "vram_used_gb": 0, "vram_total_gb": 0, "backend": "unknown"}
 
 
 @app.get("/sources")

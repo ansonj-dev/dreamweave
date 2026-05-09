@@ -842,11 +842,15 @@
   }
   .kick-label { 
     font-size: 10px; 
-    font-weight: 600; 
-    color: var(--text-muted); 
+    font-weight: 700; 
+    color: var(--kick-color);
     text-transform: uppercase; 
-    letter-spacing: 0.08em; 
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
+  .kick-label-icon { font-size: 13px; }
   .toggle-switch {
     width: 40px;
     height: 20px;
@@ -869,13 +873,14 @@
     border-radius: 50%;
     transition: all 0.2s;
   }
-  .toggle-switch.on { 
-    background: rgba(59,130,246,0.2);
-    border-color: rgba(59,130,246,0.4);
+  .toggle-switch.on {
+    background: rgba(239,68,68,0.18);
+    border-color: rgba(239,68,68,0.5);
+    box-shadow: 0 0 8px rgba(239,68,68,0.25);
   }
   .toggle-switch.on::after { 
     left: 22px;
-    background: var(--accent-blue);
+    background: var(--kick-color);
   }
   .toggle-status-text { 
     font-size: 10px; 
@@ -885,13 +890,81 @@
     letter-spacing: 0.05em;
   }
   .toggle-status-text.on {
-    color: var(--accent-blue);
+    color: var(--kick-color);
+    text-shadow: 0 0 6px rgba(239,68,68,0.4);
   }
   .enter-hint {
     font-size: 10px;
     color: var(--text-muted);
     letter-spacing: 0.05em;
   }
+  /* AMD GPU Badge */
+  .amd-gpu-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(237,28,36,0.12);
+    border: 1px solid rgba(237,28,36,0.25);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #ff4444;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.04em;
+    cursor: default;
+    transition: background 0.3s;
+  }
+  .amd-gpu-badge:hover { background: rgba(237,28,36,0.2); }
+  .amd-gpu-dot {
+    width: 6px; height: 6px;
+    background: #ff4444;
+    border-radius: 50%;
+    animation: gpuPulse 2s ease-in-out infinite;
+  }
+  @keyframes gpuPulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  /* Confidence chip on answer */
+  .confidence-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+    margin-left: 6px;
+  }
+  .confidence-chip.high { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+  .confidence-chip.med  { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+  .confidence-chip.low  { background: rgba(239,68,68,0.15);  color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+  /* Graph node fly-in animation */
+  @keyframes nodeSpawn {
+    0%   { transform: scale(0) translateY(20px); opacity: 0; }
+    60%  { transform: scale(1.2) translateY(-4px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .node-spawn { animation: nodeSpawn 0.5s cubic-bezier(.34,1.56,.64,1) forwards; }
+  /* Memory Timeline */
+  .timeline-pane { padding: 12px 14px; overflow-y: auto; height: 100%; }
+  .timeline-label { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+  .timeline-entries { display: flex; flex-direction: column; gap: 6px; }
+  .timeline-entry {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px;
+    animation: nodeSpawn 0.4s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  .timeline-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 3px;
+  }
+  .timeline-text { font-size: 11px; color: var(--text-secondary); line-height: 1.4; }
+  .timeline-source { font-weight: 600; color: var(--text-primary); font-size: 11px; }
+  .timeline-time { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
 
   /* ─── RIGHT PANEL ─── */
   .right-panel {
@@ -1671,9 +1744,9 @@
       <!-- Kick Mode Toggle - Below Input -->
       <div class="kick-mode-area">
         <div class="kick-mode-left">
-          <span class="kick-label">KICK MODE</span>
-          <div class="toggle-switch" id="kickToggle" onclick="toggleKick()"></div>
-          <span class="toggle-status-text" id="kickStatusText">OFF</span>
+          <span class="kick-label"><span class="kick-label-icon">⚡</span> KICK MODE</span>
+          <div class="toggle-switch on" id="kickToggle" onclick="toggleKick()"></div>
+          <span class="toggle-status-text on" id="kickStatusText">ON</span>
         </div>
         <span class="enter-hint">Press Enter to send</span>
       </div>
@@ -1684,13 +1757,20 @@
   <aside class="right-panel">
     <div class="viz-header">
       <span class="viz-title">Memory Visualization</span>
-      <div class="live-badge"><div class="live-dot"></div>Live</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="amd-gpu-badge" id="amdGpuBadge" title="AMD GPU Status">
+          <div class="amd-gpu-dot"></div>
+          <span id="amdGpuText">AMD · Loading…</span>
+        </div>
+        <div class="live-badge"><div class="live-dot"></div>Live</div>
+      </div>
     </div>
 
     <div class="viz-tabs">
       <div class="viz-tab active" onclick="switchVizTab(this,'graph')">Graph View</div>
       <div class="viz-tab" onclick="switchVizTab(this,'layer')">Layer View</div>
       <div class="viz-tab" onclick="switchVizTab(this,'path')">Path View</div>
+      <div class="viz-tab" onclick="switchVizTab(this,'timeline')">Timeline</div>
     </div>
 
     <div class="viz-content">
@@ -1711,6 +1791,15 @@
       <div class="viz-pane" id="pane-path">
         <div class="path-view-content" id="pathViewContent">
           <div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:12px;">Ask a question to see retrieval path</div>
+        </div>
+      </div>
+      <!-- Memory Timeline -->
+      <div class="viz-pane" id="pane-timeline">
+        <div class="timeline-pane">
+          <div class="timeline-label">Memory Ingestion Timeline</div>
+          <div class="timeline-entries" id="timelineEntries">
+            <div style="font-size:11px;color:var(--text-muted);text-align:center;padding:20px 0;">No sources ingested yet.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -2359,7 +2448,7 @@ function switchVizTab(el, pane) {
   }
 }
 
-let kickOn = false;
+let kickOn = true;
 let kickFiredCount = 0;
 let currentStreamReader = null;
 let currentAbortController = null;
@@ -2685,6 +2774,27 @@ function addSourceToSidebar(src, byteLen) {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
     </button>`;
   list.insertBefore(item, list.firstChild);
+
+  // Add to Memory Timeline
+  const tl = document.getElementById('timelineEntries');
+  if (tl) {
+    const placeholder = tl.querySelector('div:not(.timeline-entry)');
+    if (placeholder) placeholder.remove();
+    const now = new Date();
+    const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+    const layerColors = ['#3b82f6','#14b8a6','#f59e0b'];
+    const dotColor = layerColors[tl.children.length % 3];
+    const te = document.createElement('div');
+    te.className = 'timeline-entry';
+    te.innerHTML = `
+      <div class="timeline-dot" style="background:${dotColor}"></div>
+      <div>
+        <div class="timeline-source">${src}</div>
+        <div class="timeline-text">${byteLen ? (byteLen/1024).toFixed(1) + ' KB · ' : ''}Ingested into L1→L2→L3</div>
+        <div class="timeline-time">${ts}</div>
+      </div>`;
+    tl.insertBefore(te, tl.firstChild);
+  }
 }
 
 async function deleteSource(sourceName, event) {
@@ -2773,19 +2883,59 @@ async function sendMessage() {
     let answerText = '';
     let finalData = null;
 
+    // Track the current typing element for live token streaming
+    let liveAnswerEl = null;
+    let liveTokenBuffer = '';
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split('\n');
       buf = lines.pop();
+      let currentEvent = '';
       for (const line of lines) {
-        if (line.startsWith('event: ')) { /* skip */ }
-        else if (line.startsWith('data: ')) {
+        if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
           try {
             const evt = JSON.parse(line.slice(6));
-            if (evt.l1_surface !== undefined) layersData = evt;
-            if (evt.answer !== undefined) { answerText = evt.answer; finalData = evt; }
+            if (currentEvent === 'token' || evt.token !== undefined) {
+              // Live token streaming — append directly to a pre-built bubble
+              liveTokenBuffer += evt.token;
+              if (!liveAnswerEl) {
+                // Create a live streaming bubble on first token
+                const liveChat = document.getElementById('chatArea');
+                const liveAb = document.createElement('div');
+                liveAb.className = 'answer-block';
+                liveAb.id = 'liveStreamBlock';
+                liveAb.innerHTML = `
+                  <div class="answer-header">
+                    <div class="answer-header-left">
+                      <div class="answer-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7" opacity="0.5"/></svg>Dreamweave Answer</div>
+                      <span class="confidence-chip med" id="liveConfChip">streaming…</span>
+                    </div>
+                    <span class="answer-time" id="liveTimeEl">streaming</span>
+                  </div>
+                  <div class="answer-body"><p class="answer-text magic-typing-cursor" id="liveAnswerText"></p></div>`;
+                liveChat.appendChild(liveAb);
+                liveAnswerEl = document.getElementById('liveAnswerText');
+              }
+              if (liveAnswerEl) liveAnswerEl.textContent = liveTokenBuffer;
+              chat.scrollTop = chat.scrollHeight;
+            } else if (evt.l1_surface !== undefined) {
+              layersData = evt;
+            } else if (evt.answer !== undefined) {
+              answerText = evt.answer;
+              finalData = evt;
+              // If we were streaming tokens, remove the live block (renderAnswer will create the real one)
+              if (liveAnswerEl) {
+                const lb = document.getElementById('liveStreamBlock');
+                if (lb) lb.remove();
+                liveAnswerEl = null;
+                liveTokenBuffer = '';
+              }
+            }
           } catch(e) {}
         }
       }
@@ -2947,9 +3097,23 @@ function renderAnswer(data, onDone) {
   const ab = document.createElement('div');
   ab.className = 'answer-block';
   
-  // Check if kick mode is enabled - only show kick if it's ON
   const shouldShowKick = kickOn && data.kicked;
-  
+
+  // Compute kick severity level from divergence
+  const divergence = parseFloat(data.divergence || 0);
+  let kickSeverity = 'none';
+  if (kickOn && divergence > 0.6) kickSeverity = 'halted';
+  else if (kickOn && divergence > 0.3) kickSeverity = 'warning';
+
+  // Confidence chip
+  const conf = data.confidence !== undefined ? data.confidence : (kickOn ? Math.max(0, 1 - divergence) : null);
+  let confChip = '';
+  if (conf !== null) {
+    const confPct = Math.round(conf * 100);
+    const confClass = confPct >= 80 ? 'high' : confPct >= 50 ? 'med' : 'low';
+    confChip = `<span class="confidence-chip ${confClass}">${confPct}% confidence</span>`;
+  }
+
   const kickBadge = shouldShowKick ? `<div class="kick-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Kick Triggered</div>` : '';
   
   // Third card: L3 when kick is OFF, Kick when kick is ON
@@ -2993,6 +3157,7 @@ function renderAnswer(data, onDone) {
       <div class="answer-header-left">
         <div class="answer-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7" opacity="0.5"/></svg>Dreamweave Answer</div>
         ${kickBadge}
+        ${confChip}
       </div>
       <span class="answer-time">${data.time}</span>
     </div>
@@ -3106,16 +3271,19 @@ function renderAnswer(data, onDone) {
     typeChar();
   }
 
-  // Only log kick activity if kick mode is enabled
-  if (shouldShowKick) {
+  // Kick log with severity color coding
+  if (kickSeverity === 'halted') {
     document.body.classList.add('kick-flash');
     setTimeout(() => document.body.classList.remove('kick-flash'), 1500);
     kickFiredCount++;
-    addKickLog('ef4444', '<strong>Kick triggered:</strong> Divergence detected in ' + data.schema + ' pattern');
+    addKickLog('ef4444', '<strong>⛔ Kick HALTED:</strong> Structural hallucination blocked — divergence: ' + divergence.toFixed(2));
     addKickLog('f59e0b', 'Re-ranking retrieval with graph context...');
+    addKickLog('22c55e', 'Response grounded and generated in ' + data.time);
+  } else if (kickSeverity === 'warning') {
+    addKickLog('f59e0b', '<strong>⚠️ Kick WARNING:</strong> Context drift detected (divergence: ' + divergence.toFixed(2) + ')');
     addKickLog('22c55e', 'Response generated in ' + data.time);
   } else if (kickOn) {
-    addKickLog('22c55e', 'Query processed — no conflict detected');
+    addKickLog('22c55e', '✅ Query processed — no conflict detected');
   } else {
     addKickLog('8b9ab5', 'Query processed — kick mode disabled');
   }
@@ -3153,9 +3321,16 @@ function showToast(msg, type='success') {
 // ═══════════════════════════════════════════════
 window.addEventListener('load', () => {
   initGraph();
+  // Boot Kick mode ON
+  const tog = document.getElementById('kickToggle');
+  const txt = document.getElementById('kickStatusText');
+  if (tog) tog.classList.add('on');
+  if (txt) { txt.textContent = 'ON'; txt.classList.add('on'); }
   checkHealth().then(() => {
     loadSources();
     refreshGraph();
+    loadGpuStats();
+    setInterval(loadGpuStats, 10000);
   });
 });
 
@@ -3171,7 +3346,6 @@ async function checkHealth() {
       const data = await res.json();
       setConnectionStatus(true);
       showToast('DREAMWEAVE backend connected ✓', 'success');
-      // Update system status card stats
       const l1Stats = data.l1_stats || {};
       const gStats = data.graph_stats || {};
       const chunksEl = document.getElementById('statChunks');
@@ -3182,6 +3356,25 @@ async function checkHealth() {
   } catch(e) {
     setConnectionStatus(false);
     showToast('Backend offline — check server', 'error');
+  }
+}
+
+async function loadGpuStats() {
+  try {
+    const res = await fetch(`${API_BASE}/gpu-stats`);
+    if (!res.ok) return;
+    const d = await res.json();
+    const el = document.getElementById('amdGpuText');
+    if (el) {
+      if (d.vram_total_gb > 0) {
+        el.textContent = `${d.vendor} · ${d.vram_used_gb}/${d.vram_total_gb}GB VRAM`;
+      } else {
+        el.textContent = `${d.vendor} · ${d.backend}`;
+      }
+    }
+  } catch(e) {
+    const el = document.getElementById('amdGpuText');
+    if (el) el.textContent = 'GPU · Online';
   }
 }
 
