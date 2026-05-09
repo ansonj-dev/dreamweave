@@ -1496,40 +1496,8 @@
     </div>
 
     <div class="source-list" id="sourceList">
-      <div class="source-item">
-        <div class="source-icon pdf">PDF</div>
-        <div class="source-info">
-          <div class="source-name">climate_change.pdf</div>
-          <div class="source-meta">PDF · 12.4 MB</div>
-        </div>
-      </div>
-      <div class="source-item">
-        <div class="source-icon md">MD</div>
-        <div class="source-info">
-          <div class="source-name">wildfire_research.md</div>
-          <div class="source-meta">MD · 0.7 KB</div>
-        </div>
-      </div>
-      <div class="source-item">
-        <div class="source-icon pdf">PDF</div>
-        <div class="source-info">
-          <div class="source-name">urban_planning.pdf</div>
-          <div class="source-meta">PDF · 5.1 MB</div>
-        </div>
-      </div>
-      <div class="source-item">
-        <div class="source-icon txt">TXT</div>
-        <div class="source-info">
-          <div class="source-name">social_dynamics.txt</div>
-          <div class="source-meta">TXT · 2.3 KB</div>
-        </div>
-      </div>
-      <div class="source-item">
-        <div class="source-icon pdf">PDF</div>
-        <div class="source-info">
-          <div class="source-name">misinformation_study.pdf</div>
-          <div class="source-meta">PDF · 3.2 MB</div>
-        </div>
+      <div style="padding: 16px 12px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6;">
+        No sources yet.<br>Use <strong style="color:var(--text-secondary)">Ingest</strong> to add documents.
       </div>
     </div>
     <span class="view-all-link" onclick="openAllSources()">View All Sources →</span>
@@ -1606,102 +1574,17 @@
 
     <!-- Chat area -->
     <div class="chat-area" id="chatArea">
-      <!-- Demo conversation -->
-      <div class="user-bubble">
-        <div class="user-bubble-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-        </div>
-        <p>How do misinformation campaigns spread online?</p>
-      </div>
-
-      <div class="answer-block">
-        <div class="answer-header">
-          <div class="answer-header-left">
-            <div class="answer-badge">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7" opacity="0.5"/></svg>
-              Dreamweave Answer
-            </div>
-            <div class="kick-badge">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Kick Triggered
-            </div>
-          </div>
-          <span class="answer-time">12.45s</span>
-        </div>
-        <div class="answer-body">
-          <p class="answer-text">Misinformation campaigns spread through a combination of network effects, psychological triggers, and algorithmic amplification. They leverage social connections, emotional engagement, and echo chambers to propagate false narratives at scale.</p>
-        </div>
-
-        <div class="retrieval-summary">
-          <div class="retrieval-label">Retrieval Summary</div>
-          <div class="retrieval-grid">
-            <div class="retrieval-card rc-l1" onclick="viewChunks()">
-              <div class="rc-header">
-                <svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/></svg>
-                <span class="rc-title">L1 Surface Results</span>
-              </div>
-              <div class="rc-count">23 chunks retrieved</div>
-              <ul class="rc-bullets">
-                <li><div class="rc-score">Score: 0.910 · social_dynamics.txt</div>Social media algorithms amplify…</li>
-                <li><div class="rc-score">Score: 0.870 · network_effects.pdf</div>False information spreads faster…</li>
-                <li><div class="rc-score">Score: 0.830 · misinformation_study.pdf</div>Emotional content gets more…</li>
-              </ul>
-              <div class="rc-view-link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                View Chunks
-              </div>
-            </div>
-            <div class="retrieval-card rc-l2" onclick="viewGraph()">
-              <div class="rc-header">
-                <svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><line x1="8" y1="11" x2="16" y2="6"/><line x1="8" y1="13" x2="16" y2="18"/></svg>
-                <span class="rc-title">L2 Associative Results</span>
-              </div>
-              <div class="rc-count">18 relationships found</div>
-              <ul class="rc-bullets">
-                <li>misinformation ↔ social network</li>
-                <li>echo chamber ↔ polarization</li>
-                <li>algorithm ↔ engagement</li>
-              </ul>
-              <div class="rc-view-link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><line x1="8" y1="11" x2="16" y2="6"/><line x1="8" y1="13" x2="16" y2="18"/></svg>
-                View Graph
-              </div>
-            </div>
-            <div class="retrieval-card rc-kick">
-              <div class="rc-header">
-                <svg class="rc-icon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <span class="rc-title">Kick Mechanism</span>
-              </div>
-              <div class="rc-count" style="color: var(--kick-color)">Conflict detected</div>
-              <div class="rc-kick-desc">Surface results conflicted with structural context about information diffusion models.</div>
-              <div class="rc-rerank" onclick="showRerank()">Re-ranking retrieval...</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="sources-section">
-          <div class="sources-label">
-            <span>Sources Used</span>
-            <span class="sources-view-all" onclick="openAllSources()">View All (14)</span>
-          </div>
-          <div class="sources-chips">
-            <div class="source-chip">
-              <div class="sc-name">social_dynamics.txt</div>
-              <div class="sc-meta">L1 · Chunk #12</div>
-            </div>
-            <div class="source-chip">
-              <div class="sc-name">network_effects.pdf</div>
-              <div class="sc-meta">L1 · Chunk #7</div>
-            </div>
-            <div class="source-chip">
-              <div class="sc-name">information_diffusion.md</div>
-              <div class="sc-meta">L2 · Relationship</div>
-            </div>
-            <div class="source-chip">
-              <div class="sc-name">echo_chamber_theory.pdf</div>
-              <div class="sc-meta">L3 · Pattern</div>
-            </div>
-          </div>
+      <!-- Welcome state: shown until first real message is sent -->
+      <div id="welcomeState" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;opacity:0.5;">
+        <svg width="48" height="48" viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="14" r="12" stroke="rgba(96,165,250,0.3)" stroke-width="1"/>
+          <circle cx="14" cy="14" r="8" stroke="rgba(167,139,250,0.4)" stroke-width="1" stroke-dasharray="3 5"/>
+          <circle cx="14" cy="14" r="4" stroke="rgba(52,211,153,0.4)" stroke-width="1"/>
+          <circle cx="14" cy="14" r="3" fill="rgba(52,211,153,0.6)"/>
+        </svg>
+        <div style="text-align:center;">
+          <div style="font-size:15px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">DREAMWEAVE is ready</div>
+          <div style="font-size:12px;color:var(--text-muted);">Ask anything about your ingested knowledge</div>
         </div>
       </div>
 
@@ -2761,50 +2644,17 @@ function handleInputKey(e) {
   if (e.key === 'Enter') sendMessage();
 }
 
-const mockResponses = [
-  {
-    q: '',
-    answer: 'DREAMWEAVE retrieves knowledge across three cognitive layers simultaneously — surface vectors, associative graph traversal, and structural pattern matching — then reconciles contradictions via the Kick mechanism before synthesizing a response.',
-    l1: 17, l2: 12, kicked: true, time: '8.21s',
-    schema: 'hierarchical_structure',
-    sources: ['memory_architecture.pdf', 'rag_systems.md', 'cognitive_models.txt', 'layers_theory.pdf'],
-    bullets1: [
-      { text: 'Layered retrieval improves accuracy…', score: 0.92, source: 'memory_architecture.pdf' },
-      { text: 'Vector search finds surface chunks…', score: 0.88, source: 'rag_systems.md' },
-      { text: 'Graph relations add context…', score: 0.85, source: 'cognitive_models.txt' }
-    ],
-    rels: ['layer ↔ retrieval', 'context ↔ accuracy', 'graph ↔ knowledge'],
-    patterns: [
-      { name: 'hierarchical structure', confidence: 0.89, color: '#3b82f6' },
-      { name: 'information flow', confidence: 0.76, color: '#f59e0b' }
-    ],
-    divergence: 0.48
-  },
-  {
-    q: '',
-    answer: 'Echo chambers form when algorithmic recommendation systems repeatedly serve content that confirms existing beliefs. Network homophily, engagement-optimized feeds, and limited cross-cluster edges create information bubbles that amplify polarization over time.',
-    l1: 21, l2: 15, kicked: true, time: '11.03s',
-    schema: 'feedback_loop',
-    sources: ['social_dynamics.txt', 'echo_chamber_theory.pdf', 'network_effects.pdf', 'polarization_study.md'],
-    bullets1: [
-      { text: 'Recommendation algorithms optimize…', score: 0.91, source: 'social_dynamics.txt' },
-      { text: 'Homophily drives cluster formation…', score: 0.87, source: 'echo_chamber_theory.pdf' },
-      { text: 'Engagement metrics reinforce…', score: 0.83, source: 'network_effects.pdf' }
-    ],
-    rels: ['echo chamber ↔ polarization', 'algorithm ↔ recommendation', 'bias ↔ engagement'],
-    patterns: [
-      { name: 'network propagation', confidence: 0.91, color: '#3b82f6' },
-      { name: 'feedback loop', confidence: 0.74, color: '#f59e0b' }
-    ],
-    divergence: 0.51
-  },
-];
+// Mock responses removed — system uses real backend only
 
 async function sendMessage() {
   const input = document.getElementById('chatInput');
   const q = input.value.trim();
   if (!q) return;
   input.value = '';
+
+  // Hide welcome state on first message
+  const welcome = document.getElementById('welcomeState');
+  if (welcome) welcome.style.display = 'none';
 
   const chat = document.getElementById('chatArea');
   const ub = document.createElement('div');
@@ -2945,6 +2795,7 @@ function renderAnswer(data) {
       </div>`;
   }
 
+  // Use a unique class marker so we can reference the element directly
   ab.innerHTML = `
     <div class="answer-header">
       <div class="answer-header-left">
@@ -2953,7 +2804,17 @@ function renderAnswer(data) {
       </div>
       <span class="answer-time">${data.time}</span>
     </div>
-    <div class="answer-body"><p class="answer-text" id="typingAnswer"></p></div>
+    <div class="answer-body"><p class="answer-text answer-text-new"></p></div>`;
+
+  // Temporarily insert to get reference, then add rest of HTML
+  chat.appendChild(ab);
+  // Get the answer text element directly from THIS block, not by global ID
+  const answerEl = ab.querySelector('.answer-text-new');
+  answerEl.classList.remove('answer-text-new'); // clean up marker class
+
+  // Append retrieval summary and sources after answer text
+  const metaDiv = document.createElement('div');
+  metaDiv.innerHTML = `
     <div class="retrieval-summary">
       <div class="retrieval-label">Retrieval Summary</div>
       <div class="retrieval-grid">
@@ -2976,10 +2837,8 @@ function renderAnswer(data) {
       <div class="sources-label"><span>Sources Used</span><span class="sources-view-all" onclick="openAllSources()">View All</span></div>
       <div class="sources-chips">${data.sources.map((s,i)=>{const layers=['L1 · Chunk #'+Math.ceil(Math.random()*20),'L1 · Chunk #'+Math.ceil(Math.random()*10),'L2 · Relationship','L3 · Pattern'];return`<div class="source-chip"><div class="sc-name">${s}</div><div class="sc-meta">${layers[i%4]}</div></div>`}).join('')}</div>
     </div>`;
-  chat.appendChild(ab);
+  ab.appendChild(metaDiv);
 
-  // Typing effect for answer
-  const answerEl = document.getElementById('typingAnswer');
   const rawAnswer = data.answer;
   
   // Parse retrieval fallback text into structured HTML
