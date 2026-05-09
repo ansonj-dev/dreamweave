@@ -1671,154 +1671,18 @@
       <div class="viz-pane" id="pane-layer">
         <div class="layer-view-content" id="layerViewContent">
           <div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:12px;">Ask a question to see layer data</div>
-          <div class="lv-layer" style="display:none">
-            <div class="lv-header">
-              <div class="lv-title-row">
-                <div class="lv-dot" style="background:var(--l1-color)"></div>
-                <span class="lv-title" style="color:var(--l1-color)">L1 Surface — Vector Search</span>
-              </div>
-              <span class="lv-score">0.87</span>
-            </div>
-            <div class="lv-desc">Raw document chunks retrieved via cosine similarity. 23 chunks matched above threshold 0.72.</div>
-            <div class="lv-bar-wrap"><div class="lv-bar" style="width:87%;background:var(--l1-color)"></div></div>
-            <div class="lv-entries">
-              <div class="lv-entry">
-                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
-                social_dynamics.txt — depth 0.62, access 7×
-              </div>
-              <div class="lv-entry">
-                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
-                network_effects.pdf — depth 0.48, access 3×
-              </div>
-              <div class="lv-entry">
-                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
-                misinformation_study.pdf — depth 0.71, access 9×
-              </div>
-            </div>
-          </div>
-          <div class="lv-layer">
-            <div class="lv-header">
-              <div class="lv-title-row">
-                <div class="lv-dot" style="background:var(--l2-color)"></div>
-                <span class="lv-title" style="color:var(--l2-color)">L2 Associative — Graph</span>
-              </div>
-              <span class="lv-score">0.74</span>
-            </div>
-            <div class="lv-desc">18 entity relationships found. Traversal depth 2. Key hub: "Social Media Platforms" (weight 14).</div>
-            <div class="lv-bar-wrap"><div class="lv-bar" style="width:74%;background:var(--l2-color)"></div></div>
-            <div class="lv-entries">
-              <div class="lv-entry">
-                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-                misinformation ↔ social network (w: 8)
-              </div>
-              <div class="lv-entry">
-                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-                algorithm ↔ engagement ↔ virality (w: 5)
-              </div>
-            </div>
-          </div>
-          <div class="lv-layer">
-            <div class="lv-header">
-              <div class="lv-title-row">
-                <div class="lv-dot" style="background:var(--l3-color)"></div>
-                <span class="lv-title" style="color:var(--l3-color)">L3 Structural — Pattern</span>
-              </div>
-              <span class="lv-score">0.91</span>
-            </div>
-            <div class="lv-desc">Schema matched: <strong>network_propagation</strong> (0.91 confidence). Secondary: feedback_loop (0.67).</div>
-            <div class="lv-bar-wrap"><div class="lv-bar" style="width:91%;background:var(--l3-color)"></div></div>
-            <div class="lv-entries">
-              <div class="lv-entry">
-                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                network_propagation — 91% match
-              </div>
-              <div class="lv-entry">
-                <svg class="lv-entry-icon" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-                feedback_loop — 67% match
-              </div>
-            </div>
-          </div>
         </div>
       </div>
+
 
       <!-- Path View -->
       <div class="viz-pane" id="pane-path">
         <div class="path-view-content" id="pathViewContent">
-          <div id="pathViewPlaceholder" style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:12px;">Ask a question to see retrieval path</div>
-          <div class="path-node">
-            <div class="path-node-left">
-              <div class="path-circle" style="background:rgba(59,130,246,0.15);color:var(--l1-color);border:1px solid rgba(59,130,246,0.3)">L1</div>
-              <div class="path-line"></div>
-            </div>
-            <div class="path-node-right">
-              <div class="path-node-title" style="color:var(--l1-color)">Vector Retrieval</div>
-              <div class="path-node-desc">23 chunks retrieved from 5 documents. Top match: social_dynamics.txt (score 0.87). Recency decay applied to 6 documents.</div>
-              <div class="path-node-tags">
-                <span class="path-tag" style="background:rgba(59,130,246,0.1);color:var(--l1-color)">0.87 score</span>
-                <span class="path-tag" style="background:rgba(59,130,246,0.1);color:var(--l1-color)">23 chunks</span>
-              </div>
-            </div>
-          </div>
-          <div class="path-node">
-            <div class="path-node-left">
-              <div class="path-circle" style="background:rgba(20,184,166,0.15);color:var(--l2-color);border:1px solid rgba(20,184,166,0.3)">L2</div>
-              <div class="path-line"></div>
-            </div>
-            <div class="path-node-right">
-              <div class="path-node-title" style="color:var(--l2-color)">Graph Traversal</div>
-              <div class="path-node-desc">Seed entities: [misinformation, social network, algorithm]. Traversal depth 2 found 18 relationships. Hub nodes: Social Media Platforms (w:14), Algorithmic Amplification (w:11).</div>
-              <div class="path-node-tags">
-                <span class="path-tag" style="background:rgba(20,184,166,0.1);color:var(--l2-color)">18 edges</span>
-                <span class="path-tag" style="background:rgba(20,184,166,0.1);color:var(--l2-color)">depth 2</span>
-              </div>
-            </div>
-          </div>
-          <div class="path-node">
-            <div class="path-node-left">
-              <div class="path-circle" style="background:rgba(245,158,11,0.15);color:var(--l3-color);border:1px solid rgba(245,158,11,0.3)">L3</div>
-              <div class="path-line"></div>
-            </div>
-            <div class="path-node-right">
-              <div class="path-node-title" style="color:var(--l3-color)">Pattern Match</div>
-              <div class="path-node-desc">Schema network_propagation matched at 0.91 cosine similarity. Conflict detected: L1 surface context diverged from structural template by 0.48 (threshold: 0.42). Kick fired.</div>
-              <div class="path-node-tags">
-                <span class="path-tag" style="background:rgba(245,158,11,0.1);color:var(--l3-color)">0.91 match</span>
-                <span class="path-tag" style="background:rgba(239,68,68,0.1);color:var(--kick-color)">KICK: 0.48</span>
-              </div>
-            </div>
-          </div>
-          <div class="path-node">
-            <div class="path-node-left">
-              <div class="path-circle" style="background:rgba(239,68,68,0.15);color:var(--kick-color);border:1px solid rgba(239,68,68,0.3)">⚡</div>
-              <div class="path-line"></div>
-            </div>
-            <div class="path-node-right">
-              <div class="path-node-title" style="color:var(--kick-color)">Kick Re-rank</div>
-              <div class="path-node-desc">Re-weighting L1 chunks using L3 structural context. Severity: High. 8 chunks re-ranked. New top result: misinformation_study.pdf (chunk #4).</div>
-              <div class="path-node-tags">
-                <span class="path-tag" style="background:rgba(239,68,68,0.1);color:var(--kick-color)">divergence 0.48</span>
-                <span class="path-tag" style="background:rgba(239,68,68,0.1);color:var(--kick-color)">8 reranked</span>
-              </div>
-            </div>
-          </div>
-          <div class="path-node">
-            <div class="path-node-left">
-              <div class="path-circle" style="background:rgba(124,58,237,0.15);color:#a78bfa;border:1px solid rgba(124,58,237,0.3)">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              </div>
-            </div>
-            <div class="path-node-right">
-              <div class="path-node-title" style="color:#a78bfa">LLM Generation</div>
-              <div class="path-node-desc">Telescoped context assembled. 4,200 tokens sent to Llama 3 8B. Response generated in 12.45s on AMD MI300X.</div>
-              <div class="path-node-tags">
-                <span class="path-tag" style="background:rgba(124,58,237,0.1);color:#a78bfa">4,200 tokens</span>
-                <span class="path-tag" style="background:rgba(124,58,237,0.1);color:#a78bfa">12.45s</span>
-              </div>
-            </div>
-          </div>
+          <div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:12px;">Ask a question to see retrieval path</div>
         </div>
       </div>
     </div>
+
 
     <!-- Legend -->
     <div class="viz-legend">
@@ -1836,30 +1700,9 @@
         <span class="kick-log-link" onclick="openAllLogs()">View All Logs →</span>
       </div>
       <div class="kick-log-entries" id="kickLog">
-        <div class="kick-log-entry" style="display:none">
-          <div class="kick-log-dot" style="background:var(--kick-color)"></div>
-          <span class="kick-log-time">12:45:22</span>
-          <span class="kick-log-text"><strong>Kick triggered:</strong> Conflict between surface data and structural pattern detected</span>
-        </div>
-        <div class="kick-log-entry">
-          <div class="kick-log-dot" style="background:var(--accent-amber-bright)"></div>
-          <span class="kick-log-time">12:45:23</span>
-          <span class="kick-log-text">Analyzing contradictions across layers...</span>
-        </div>
-        <div class="kick-log-entry">
-          <div class="kick-log-dot" style="background:var(--l2-color)"></div>
-          <span class="kick-log-time">12:45:24</span>
-          <span class="kick-log-text">Re-ranking retrieval with graph context...</span>
-        </div>
-        <div class="kick-log-entry">
-          <div class="kick-log-dot" style="background:var(--accent-green-bright)"></div>
-          <span class="kick-log-time">12:45:25</span>
-          <span class="kick-log-text">New context assembled. Generating response...</span>
-        </div>
+        <div style="padding:8px 0;font-size:11px;color:var(--text-muted);text-align:center;">No activity yet</div>
       </div>
-    </div>
-  </aside>
-</div>
+
 
 <!-- ═══ MODALS ═══ -->
 
@@ -2446,6 +2289,7 @@ let kickOn = false;
 let kickFiredCount = 0;
 let currentStreamReader = null;
 let currentAbortController = null;
+let typingTimer = null;
 
 function toggleKick() {
   kickOn = !kickOn;
@@ -2736,7 +2580,10 @@ async function sendMessage() {
 
     if (layersData) {
       const mapped = buildRenderData(layersData, answerText, elapsed);
-      renderAnswer(mapped);
+      renderAnswer(mapped, () => {
+        document.getElementById('sendBtn').classList.remove('hidden');
+        document.getElementById('stopBtn').classList.remove('show');
+      });
       updateLayerView(layersData, q);
       updatePathView(layersData, q, elapsed);
       refreshGraph();
@@ -2755,9 +2602,12 @@ async function sendMessage() {
       showToast('Backend error: ' + err.message, 'error');
     }
   } finally {
-    // Always restore buttons
-    document.getElementById('sendBtn').classList.remove('hidden');
-    document.getElementById('stopBtn').classList.remove('show');
+    // Buttons restored AFTER typing completes (see renderAnswer callback)
+    // Only restore here if no answer was rendered (error/abort path)
+    if (!layersData) {
+      document.getElementById('sendBtn').classList.remove('hidden');
+      document.getElementById('stopBtn').classList.remove('show');
+    }
   }
 }
 
@@ -2769,6 +2619,10 @@ function stopGeneration() {
   if (currentStreamReader) {
     try { currentStreamReader.cancel(); } catch(e) {}
     currentStreamReader = null;
+  }
+  if (typingTimer) {
+    clearTimeout(typingTimer);
+    typingTimer = null;
   }
   const typing = document.getElementById('typingIndicator');
   typing.classList.remove('show');
@@ -2862,8 +2716,8 @@ function buildRenderData(ctx, answer, timeStr) {
   };
 }
 
-// Render answer function - works with both mock and real backend data
-function renderAnswer(data) {
+// Render answer function
+function renderAnswer(data, onDone) {
   const chat = document.getElementById('chatArea');
   const ab = document.createElement('div');
   ab.className = 'answer-block';
@@ -2991,41 +2845,35 @@ function renderAnswer(data) {
   chat.addEventListener('scroll', scrollGuard, { passive: true });
   
   if (formatted.isHtml) {
-    // Render structured HTML immediately, no typing effect needed
     answerEl.innerHTML = formatted.html;
     ab.appendChild(metaDiv);
     void metaDiv.offsetWidth;
     metaDiv.style.opacity = '1';
     if (!userScrolled) chat.scrollTop = chat.scrollHeight;
     chat.removeEventListener('scroll', scrollGuard);
+    if (onDone) onDone();
   } else {
-    // Standard typing effect for real LLM answers
     const fullText = formatted.text;
     let charIndex = 0;
     function typeChar() {
       if (charIndex < fullText.length) {
         answerEl.textContent = fullText.substring(0, charIndex + 1);
         charIndex++;
-        
-        // Show metaDiv midway through typing
         if (charIndex === Math.floor(fullText.length / 2)) {
           ab.appendChild(metaDiv);
-          // Trigger reflow
           void metaDiv.offsetWidth;
           metaDiv.style.opacity = '1';
         }
-        
-        // Only auto-scroll if user hasn't manually scrolled up
         if (!userScrolled) chat.scrollTop = chat.scrollHeight;
-        setTimeout(typeChar, 18);
+        typingTimer = setTimeout(typeChar, 18);
       } else {
-        // Fallback in case string is very short
         if (!ab.contains(metaDiv)) {
           ab.appendChild(metaDiv);
           void metaDiv.offsetWidth;
           metaDiv.style.opacity = '1';
         }
         chat.removeEventListener('scroll', scrollGuard);
+        if (onDone) onDone();
       }
     }
     typeChar();
@@ -3048,6 +2896,9 @@ function renderAnswer(data) {
 
 function addKickLog(color, text) {
   const log = document.getElementById('kickLog');
+  // Remove placeholder on first real entry
+  const placeholder = log.querySelector('div:not(.kick-log-entry)');
+  if (placeholder) placeholder.remove();
   const now = new Date();
   const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
   const el = document.createElement('div');
