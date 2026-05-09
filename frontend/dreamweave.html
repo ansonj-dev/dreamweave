@@ -2178,6 +2178,8 @@ function handleGraphClick(e) {
   }
 }
 
+let currentPopupAbortController = null;
+
 function showNodePopup(node, x, y) {
   // Remove existing popup and cancel any active stream
   if (currentPopupAbortController) {
