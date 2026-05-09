@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+import tempfile
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -45,6 +46,11 @@ class QueryRequest(BaseModel):
 class UrlIngestRequest(BaseModel):
     url: str = Field(..., min_length=8)
     source: str = "url"
+
+
+class YoutubeIngestRequest(BaseModel):
+    video_url: str = Field(..., min_length=8)
+    source: str | None = None
 
 
 class BatchIngestRequest(BaseModel):
@@ -318,6 +324,27 @@ async def ingest_url(req: UrlIngestRequest) -> IngestResponse:
         raise HTTPException(status_code=500, detail=f"URL ingest failed: {exc}") from exc
 
 
+@app.post("/ingest/youtube", response_model=IngestResponse)
+async def ingest_youtube(req: YoutubeIngestRequest) -> IngestResponse:
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi  # type: ignore
+        import re as _re
+        # Extract video ID from URL
+        vid_match = _re.search(r"(?:v=|youtu\.be/)([\w-]{11})", req.video_url)
+        if not vid_match:
+            raise HTTPException(status_code=400, detail="Could not extract YouTube video ID from URL")
+        video_id = vid_match.group(1)
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        text = " ".join(entry["text"] for entry in transcript_list)
+        source = req.source or f"youtube:{video_id}"
+        result = get_orchestrator().ingest(text=text, source=source)
+        return IngestResponse(status="ok", **result)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"YouTube transcript failed: {exc}") from exc
+
+
 def html_to_text(html: str) -> str:
     without_scripts = re.sub(r"<(script|style).*?>.*?</\1>", " ", html, flags=re.IGNORECASE | re.DOTALL)
     without_tags = re.sub(r"<[^>]+>", " ", without_scripts)
@@ -326,20 +353,67 @@ def html_to_text(html: str) -> str:
 
 def extract_uploaded_text(filename: str, content: bytes) -> str:
     lower_name = filename.lower()
+
+    # ── PDF ──────────────────────────────────────────────────────────────
     if lower_name.endswith(".pdf"):
         try:
             from pypdf import PdfReader
-
             reader = PdfReader(io.BytesIO(content))
             return "\n".join(page.extract_text() or "" for page in reader.pages)
         except Exception as exc:
             raise HTTPException(status_code=400, detail=f"PDF text extraction failed: {exc}") from exc
+
+    # ── Audio / Video → Whisper transcription ─────────────────────────────
+    AV_EXTS = {".mp3", ".mp4", ".wav", ".m4a", ".ogg", ".flac", ".webm", ".mkv", ".avi", ".mov"}
+    ext = Path(lower_name).suffix
+    if ext in AV_EXTS:
+        try:
+            import whisper  # type: ignore
+        except ImportError:
+            raise HTTPException(status_code=400, detail="Whisper is not installed on this server. Run: pip install openai-whisper")
+        try:
+            model = whisper.load_model("base")
+            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+                tmp.write(content)
+                tmp_path = tmp.name
+            result = model.transcribe(tmp_path)
+            os.unlink(tmp_path)
+            return result.get("text", "").strip()
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Audio/video transcription failed: {exc}") from exc
+
+    # ── Images → OCR ─────────────────────────────────────────────────────
+    IMG_EXTS = {".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".gif", ".webp"}
+    if ext in IMG_EXTS:
+        try:
+            from PIL import Image  # type: ignore
+            import pytesseract  # type: ignore
+            img = Image.open(io.BytesIO(content))
+            return pytesseract.image_to_string(img).strip()
+        except ImportError:
+            raise HTTPException(status_code=400, detail="Image OCR requires: pip install pillow pytesseract (and tesseract-ocr system package)")
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Image OCR failed: {exc}") from exc
+
+    # ── DOCX ─────────────────────────────────────────────────────────────
+    if lower_name.endswith(".docx"):
+        try:
+            import zipfile, xml.etree.ElementTree as ET
+            with zipfile.ZipFile(io.BytesIO(content)) as z:
+                xml_content = z.read("word/document.xml")
+            tree = ET.fromstring(xml_content)
+            ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+            return " ".join(node.text or "" for node in tree.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t")).strip()
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"DOCX extraction failed: {exc}") from exc
+
+    # ── Plain text fallback ───────────────────────────────────────────────
     for encoding in ("utf-8", "utf-16", "latin-1"):
         try:
             return content.decode(encoding)
         except UnicodeDecodeError:
             continue
-    raise HTTPException(status_code=400, detail="Unsupported text encoding")
+    raise HTTPException(status_code=400, detail=f"Unsupported file type or encoding: {ext}")
 
 
 def sse(event: str, data: dict[str, Any]) -> str:

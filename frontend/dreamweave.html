@@ -1454,6 +1454,38 @@
     color: var(--text-muted);
   }
   .typing-indicator.show { display: flex; }
+
+  /* --- Magic Spells --- */
+  @keyframes kickFlash {
+    0% { box-shadow: inset 0 0 0 0 rgba(239,68,68,0); border-color: transparent; }
+    10% { box-shadow: inset 0 0 100px 10px rgba(239,68,68,0.5); border-color: rgba(239,68,68,1); }
+    100% { box-shadow: inset 0 0 0 0 rgba(239,68,68,0); border-color: transparent; }
+  }
+  .kick-flash {
+    animation: kickFlash 1.5s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+  @keyframes graphPulse {
+    0%, 100% { box-shadow: inset 0 0 0px 0px rgba(124,58,237,0); }
+    50% { box-shadow: inset 0 0 40px 5px rgba(124,58,237,0.3); }
+  }
+  .graph-pulsing {
+    animation: graphPulse 2s infinite ease-in-out;
+  }
+  @keyframes sourceBurst {
+    0% { transform: scale(1); background: transparent; }
+    50% { transform: scale(1.05); background: rgba(34,197,94,0.2); }
+    100% { transform: scale(1); background: transparent; }
+  }
+  .source-burst {
+    animation: sourceBurst 0.6s ease-out;
+  }
+  .magic-typing-cursor::after {
+    content: '█';
+    animation: blink 1s step-end infinite;
+    color: var(--l1-color);
+    margin-left: 4px;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
 </style>
 </head>
 <body>
@@ -1708,44 +1740,86 @@
 
 <!-- Ingest Modal -->
 <div class="modal-overlay" id="ingestModal">
-  <div class="modal">
+  <div class="modal" style="max-width:540px;">
     <div class="modal-header">
-      <span class="modal-title">Ingest Document</span>
+      <span class="modal-title">Ingest Content</span>
       <button class="modal-close" onclick="closeModal('ingestModal')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    
-    <!-- Tabs for Text and URL -->
+
+    <!-- Tabs -->
     <div class="modal-tabs">
-      <div class="modal-tab active" onclick="switchIngestTab('text')">Text</div>
-      <div class="modal-tab" onclick="switchIngestTab('url')">URL</div>
+      <div class="modal-tab active" id="tab-text"    onclick="switchIngestTab('text')">Text</div>
+      <div class="modal-tab"        id="tab-file"    onclick="switchIngestTab('file')">Files</div>
+      <div class="modal-tab"        id="tab-url"     onclick="switchIngestTab('url')">URL</div>
+      <div class="modal-tab"        id="tab-youtube" onclick="switchIngestTab('youtube')">YouTube</div>
     </div>
-    
-    <!-- Text Tab Content -->
+
+    <!-- TEXT TAB -->
     <div class="tab-content active" id="text-tab">
       <label class="ingest-label">Source Name</label>
       <input class="ingest-input" id="ingestSource" placeholder="e.g. network_theory.txt" />
       <label class="ingest-label">Document Text</label>
       <textarea class="ingest-textarea" id="ingestText" placeholder="Paste your document content here..."></textarea>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">Or drag and drop a file onto this window. Supports PDF, MD, TXT.</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Or switch to the Files tab to upload files.</div>
     </div>
-    
-    <!-- URL Tab Content -->
+
+    <!-- FILE TAB -->
+    <div class="tab-content" id="file-tab">
+      <!-- Hidden file input — accepts everything, multiple -->
+      <input type="file" id="filePickerInput" multiple accept="*/*" style="display:none" onchange="handleFilePickerChange(this.files)" />
+
+      <!-- Drop zone / click area -->
+      <div id="ingestDropZone"
+        style="border:2px dashed var(--border-bright);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:14px;background:var(--bg-dark);"
+        onclick="document.getElementById('filePickerInput').click()"
+        ondragenter="ingestZoneHighlight(true)"
+        ondragleave="ingestZoneHighlight(false)"
+        ondragover="event.preventDefault()"
+        ondrop="ingestZoneDropped(event)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:38px;height:38px;margin:0 auto 10px;display:block"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">Click or drag files here</div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">
+          PDF · TXT · MD · DOCX · MP3 · MP4 · WAV · M4A<br>
+          PNG · JPG · WEBM · MKV · and more — multiple files supported
+        </div>
+      </div>
+
+      <!-- Upload progress list -->
+      <div id="fileUploadList" style="max-height:160px;overflow-y:auto;display:none;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+
+      <div style="font-size:11px;color:var(--text-muted);">Audio &amp; video → transcribed via Whisper · Images → OCR · DOCX → extracted · YouTube → transcript</div>
+    </div>
+
+    <!-- URL TAB -->
     <div class="tab-content" id="url-tab">
       <label class="ingest-label">Source URL</label>
       <input class="ingest-input" id="ingestUrl" placeholder="https://example.com/document.pdf" />
       <label class="ingest-label">Source Name (Optional)</label>
       <input class="ingest-input" id="ingestUrlName" placeholder="e.g. research_paper.pdf" />
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">Enter a URL to fetch and ingest the document content.</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">Fetches and ingests web page or document content.</div>
     </div>
-    
+
+    <!-- YOUTUBE TAB -->
+    <div class="tab-content" id="youtube-tab">
+      <label class="ingest-label">YouTube Video URL</label>
+      <input class="ingest-input" id="ingestYoutubeUrl" placeholder="https://www.youtube.com/watch?v=..." />
+      <label class="ingest-label">Source Name (Optional)</label>
+      <input class="ingest-input" id="ingestYoutubeName" placeholder="e.g. lecture_on_ai.txt" />
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">
+        Extracts the auto-generated or manual transcript from the video and ingests it.<br>
+        Works with any public YouTube video that has captions.
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeModal('ingestModal')">Cancel</button>
-      <button class="btn-primary" onclick="doIngest()">Ingest Document</button>
+      <button class="btn-primary" id="ingestSubmitBtn" onclick="doIngest()">Ingest</button>
     </div>
   </div>
 </div>
+
 
 <!-- All Sources Modal -->
 <div class="modal-overlay" id="allSourcesModal">
@@ -2326,21 +2400,74 @@ function openIngestModal() {
   switchIngestTab('text');
 }
 
-// Switch between Text and URL tabs in ingest modal
+// Switch between tabs in ingest modal
 function switchIngestTab(tab) {
-  const tabs = document.querySelectorAll('#ingestModal .modal-tab');
-  const contents = document.querySelectorAll('#ingestModal .tab-content');
-  
-  tabs.forEach(t => t.classList.remove('active'));
-  contents.forEach(c => c.classList.remove('active'));
-  
-  if (tab === 'text') {
-    tabs[0].classList.add('active');
-    document.getElementById('text-tab').classList.add('active');
-  } else {
-    tabs[1].classList.add('active');
-    document.getElementById('url-tab').classList.add('active');
+  const allTabs = ['text','file','url','youtube'];
+  allTabs.forEach(t => {
+    const tabEl = document.getElementById(`tab-${t}`);
+    const contentEl = document.getElementById(`${t}-tab`);
+    if (tabEl) tabEl.classList.toggle('active', t === tab);
+    if (contentEl) contentEl.classList.toggle('active', t === tab);
+  });
+  // Update submit button label
+  const btn = document.getElementById('ingestSubmitBtn');
+  if (btn) {
+    const labels = { text: 'Ingest Text', file: 'Upload Files', url: 'Fetch & Ingest', youtube: 'Get Transcript' };
+    btn.textContent = labels[tab] || 'Ingest';
   }
+}
+
+// ── File Picker helpers ──────────────────────────────────────
+function ingestZoneHighlight(on) {
+  const zone = document.getElementById('ingestDropZone');
+  if (!zone) return;
+  zone.style.borderColor = on ? 'var(--accent-purple-bright)' : 'var(--border-bright)';
+  zone.style.background = on ? 'rgba(124,58,237,0.08)' : 'var(--bg-dark)';
+}
+
+function ingestZoneDropped(e) {
+  e.preventDefault();
+  ingestZoneHighlight(false);
+  const files = e.dataTransfer && e.dataTransfer.files;
+  if (files && files.length > 0) handleFilesInModal(files);
+}
+
+function handleFilePickerChange(files) {
+  if (files && files.length > 0) handleFilesInModal(files);
+}
+
+async function handleFilesInModal(files) {
+  const listEl = document.getElementById('fileUploadList');
+  listEl.style.display = 'flex';
+
+  for (const file of files) {
+    // Create progress row
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;background:var(--bg-mid);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;';
+    row.innerHTML = `
+      <span style="color:var(--text-muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${file.name}</span>
+      <span class="file-status" style="color:var(--text-muted);white-space:nowrap;">Uploading…</span>`;
+    listEl.appendChild(row);
+    const statusEl = row.querySelector('.file-status');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file, file.name);
+      const res = await fetch(`${API_BASE}/ingest/file`, { method: 'POST', body: formData });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      statusEl.textContent = `✓ ${data.chunks_ingested} chunks`;
+      statusEl.style.color = '#22c55e';
+      addSourceToSidebar(file.name, file.size);
+      addKickLog('22c55e', `File: ${file.name} — ${data.chunks_ingested} chunks`);
+      refreshGraph();
+    } catch(e) {
+      statusEl.textContent = '✗ Failed';
+      statusEl.style.color = '#ef4444';
+      row.title = e.message;
+    }
+  }
+  showToast(`Processed ${files.length} file(s)`, 'success');
 }
 
 async function openAllSources() {
@@ -2434,7 +2561,8 @@ function openSettings() { openModal('settingsModal'); }
 function openAllLogs() { openModal('logsModal'); }
 
 function viewChunks() {
-  showToast('Viewing L1 chunks — connect to backend to see live data', 'success');
+  const tabs = document.querySelectorAll('.viz-tab');
+  if (tabs.length > 1) switchVizTab(tabs[1], 'layer');
 }
 function viewGraph() {
   openGraphExplorer();
@@ -2444,13 +2572,15 @@ function showRerank() {
 }
 
 async function doIngest() {
-  const textTab = document.getElementById('text-tab');
+  const activeTab = document.querySelector('#ingestModal .tab-content.active');
+  if (!activeTab) return;
+  const tabId = activeTab.id; // text-tab | file-tab | url-tab | youtube-tab
 
-  if (textTab.classList.contains('active')) {
-    // ── Text ingest ──────────────────────────────
+  if (tabId === 'text-tab') {
+    // ── Text ingest ──────────────────────────────────────────
     const src = document.getElementById('ingestSource').value.trim();
     const txt = document.getElementById('ingestText').value.trim();
-    if (!src || !txt) { showToast('Please fill in source name and document text', 'error'); return; }
+    if (!src || !txt) { showToast('Fill in source name and document text', 'error'); return; }
     closeModal('ingestModal');
     showToast('Ingesting…', 'success');
     try {
@@ -2469,8 +2599,20 @@ async function doIngest() {
       refreshGraph();
     } catch(e) { showToast('Ingest failed: ' + e.message, 'error'); }
 
-  } else {
-    // ── URL ingest ───────────────────────────────
+  } else if (tabId === 'file-tab') {
+    // ── File: just open picker if no files shown yet ─────────
+    const listEl = document.getElementById('fileUploadList');
+    if (!listEl || listEl.children.length === 0) {
+      document.getElementById('filePickerInput').click();
+    } else {
+      closeModal('ingestModal');
+      // Reset for next time
+      listEl.innerHTML = '';
+      listEl.style.display = 'none';
+    }
+
+  } else if (tabId === 'url-tab') {
+    // ── URL ingest ───────────────────────────────────────────
     const url = document.getElementById('ingestUrl').value.trim();
     const urlName = document.getElementById('ingestUrlName').value.trim();
     if (!url) { showToast('Please enter a URL', 'error'); return; }
@@ -2492,15 +2634,45 @@ async function doIngest() {
       document.getElementById('ingestUrlName').value = '';
       refreshGraph();
     } catch(e) { showToast('URL ingest failed: ' + e.message, 'error'); }
+
+  } else if (tabId === 'youtube-tab') {
+    // ── YouTube transcript ───────────────────────────────────
+    const videoUrl = document.getElementById('ingestYoutubeUrl').value.trim();
+    const ytName = document.getElementById('ingestYoutubeName').value.trim();
+    if (!videoUrl) { showToast('Please enter a YouTube URL', 'error'); return; }
+    closeModal('ingestModal');
+    showToast('Fetching YouTube transcript…', 'success');
+    try {
+      const res = await fetch(`${API_BASE}/ingest/youtube`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ video_url: videoUrl, source: ytName || null })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      addSourceToSidebar(data.source, 0);
+      addKickLog('22c55e', `YouTube: ${data.source} — ${data.chunks_ingested} chunks`);
+      showToast(`Ingested YouTube transcript: ${data.chunks_ingested} chunks`, 'success');
+      document.getElementById('ingestYoutubeUrl').value = '';
+      document.getElementById('ingestYoutubeName').value = '';
+      refreshGraph();
+    } catch(e) { showToast('YouTube ingest failed: ' + e.message, 'error'); }
   }
 }
 
 function addSourceToSidebar(src, byteLen) {
   const list = document.getElementById('sourceList');
+  
+  // Clear placeholder if it exists
+  if (list.children.length === 1 && !list.firstElementChild.classList.contains('source-item')) {
+    list.innerHTML = '';
+  }
+
   const ext = src.split('.').pop().toUpperCase();
   const iconClass = ext === 'PDF' ? 'pdf' : ext === 'MD' ? 'md' : 'txt';
   const item = document.createElement('div');
-  item.className = 'source-item';
+  item.className = 'source-item source-burst';
+  setTimeout(() => item.classList.remove('source-burst'), 600);
   // set data-source so we can remove it easily
   item.setAttribute('data-source', src);
   item.innerHTML = `
@@ -2530,6 +2702,11 @@ async function deleteSource(sourceName, event) {
         item.remove();
       }
     });
+
+    const list = document.getElementById('sourceList');
+    if (list && list.children.length === 0) {
+      list.innerHTML = '<div style="padding: 16px 12px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6;">No sources yet.<br>Use <strong style="color:var(--text-secondary)">Ingest</strong> to add documents.</div>';
+    }
 
     // Refresh modals/graph if open
     if (document.getElementById('allSourcesModal').classList.contains('open')) {
@@ -2565,6 +2742,7 @@ async function sendMessage() {
 
   const typing = document.getElementById('typingIndicator');
   typing.classList.add('show');
+  document.getElementById('pane-graph').classList.add('graph-pulsing');
   // Update layer status chips to ACTIVE
   document.querySelectorAll('.layer-status').forEach((el, i) => {
     if (i < 3) { el.textContent = 'ACTIVE'; el.classList.remove('idle'); el.classList.add('active'); }
@@ -2616,6 +2794,7 @@ async function sendMessage() {
     currentStreamReader = null;
     currentAbortController = null;
     typing.classList.remove('show');
+    document.getElementById('pane-graph').classList.remove('graph-pulsing');
     // Reset layer status chips
     document.querySelectorAll('.layer-status').forEach((el, i) => {
       if (i < 3) { el.textContent = 'IDLE'; el.classList.remove('active'); el.classList.add('idle'); }
@@ -2638,6 +2817,7 @@ async function sendMessage() {
     currentStreamReader = null;
     currentAbortController = null;
     typing.classList.remove('show');
+    document.getElementById('pane-graph').classList.remove('graph-pulsing');
     // Reset layer status chips
     document.querySelectorAll('.layer-status').forEach((el, i) => {
       if (i < 3) { el.textContent = 'IDLE'; el.classList.remove('active'); el.classList.add('idle'); }
@@ -2670,6 +2850,7 @@ function stopGeneration() {
   }
   const typing = document.getElementById('typingIndicator');
   typing.classList.remove('show');
+  document.getElementById('pane-graph').classList.remove('graph-pulsing');
   document.querySelectorAll('.layer-status').forEach((el, i) => {
     if (i < 3) { el.textContent = 'IDLE'; el.classList.remove('active'); el.classList.add('idle'); }
   });
@@ -2899,6 +3080,7 @@ function renderAnswer(data, onDone) {
   } else {
     const fullText = formatted.text;
     let charIndex = 0;
+    answerEl.classList.add('magic-typing-cursor');
     function typeChar() {
       if (charIndex < fullText.length) {
         answerEl.textContent = fullText.substring(0, charIndex + 1);
@@ -2911,6 +3093,7 @@ function renderAnswer(data, onDone) {
         if (!userScrolled) chat.scrollTop = chat.scrollHeight;
         typingTimer = setTimeout(typeChar, 18);
       } else {
+        answerEl.classList.remove('magic-typing-cursor');
         if (!ab.contains(metaDiv)) {
           ab.appendChild(metaDiv);
           void metaDiv.offsetWidth;
@@ -2925,6 +3108,8 @@ function renderAnswer(data, onDone) {
 
   // Only log kick activity if kick mode is enabled
   if (shouldShowKick) {
+    document.body.classList.add('kick-flash');
+    setTimeout(() => document.body.classList.remove('kick-flash'), 1500);
     kickFiredCount++;
     addKickLog('ef4444', '<strong>Kick triggered:</strong> Divergence detected in ' + data.schema + ' pattern');
     addKickLog('f59e0b', 'Re-ranking retrieval with graph context...');
@@ -3005,8 +3190,11 @@ async function loadSources() {
     const res = await fetch(`${API_BASE}/sources`);
     if (!res.ok) return;
     const sources = await res.json();
-    if (!sources || !sources.length) return;
     const list = document.getElementById('sourceList');
+    if (!sources || !sources.length) {
+      if (list) list.innerHTML = '<div style="padding: 16px 12px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6;">No sources yet.<br>Use <strong style="color:var(--text-secondary)">Ingest</strong> to add documents.</div>';
+      return;
+    }
     list.innerHTML = '';
     sources.slice(0, 8).forEach(s => {
       const name = s.source || s.name || 'Unknown';
@@ -3014,12 +3202,17 @@ async function loadSources() {
       const iconClass = ext === 'PDF' ? 'pdf' : ext === 'MD' ? 'md' : 'txt';
       const item = document.createElement('div');
       item.className = 'source-item';
+      item.setAttribute('data-source', name);
       item.innerHTML = `
         <div class="source-icon ${iconClass}">${ext}</div>
-        <div class="source-info">
+        <div class="source-info" style="flex:1">
           <div class="source-name">${name}</div>
           <div class="source-meta">${ext} · ${s.chunks || s.chunk_count || 0} chunks</div>
-        </div>`;
+        </div>
+        <button class="btn-icon" style="color:var(--text-muted);" onclick="deleteSource('${name.replace(/'/g, "\\'")}', event)" title="Delete Source">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+        </button>
+      `;
       list.appendChild(item);
     });
   } catch(e) { /* sources unavailable */ }
@@ -3030,7 +3223,15 @@ async function refreshGraph() {
     const res = await fetch(`${API_BASE}/graph`);
     if (!res.ok) return;
     const g = await res.json();
-    if (!g || !g.nodes || !g.nodes.length) return;
+    if (!g || !g.nodes || !g.nodes.length) {
+      updateGraphData([], []);
+      const list = document.getElementById('geEntityList');
+      if (list) list.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text-muted);font-size:12px;">No graph data available.</div>';
+      
+      const nodesEl = document.getElementById('statNodes');
+      if (nodesEl) nodesEl.textContent = '0';
+      return;
+    }
     const colors = ['#9d5cf6','#14b8a6','#f59e0b','#3b82f6','#ec4899','#ef4444','#60a5fa','#a78bfa'];
     const W = 1, H = 1;
     const nodes = g.nodes.slice(0, 25).map((n, i) => ({
@@ -3131,47 +3332,42 @@ function updateGraphData(nodes, edges, conflicts = []) {
 // ═══════════════════════════════════════════════
 // DRAG AND DROP FILE UPLOAD
 // ═══════════════════════════════════════════════
-const dropZone = document.body;
+window.addEventListener('load', () => {
+  let dragCounter = 0;
+  const dropZone = document.body;
 
-// Prevent default drag behaviors
-['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-  dropZone.addEventListener(eventName, preventDefaults, false);
-  document.body.addEventListener(eventName, preventDefaults, false);
-});
-
-function preventDefaults(e) {
-  e.preventDefault();
-  e.stopPropagation();
-}
-
-// Highlight drop zone when item is dragged over it
-['dragenter', 'dragover'].forEach(eventName => {
-  dropZone.addEventListener(eventName, highlight, false);
-});
-
-['dragleave', 'drop'].forEach(eventName => {
-  dropZone.addEventListener(eventName, unhighlight, false);
-});
-
-function highlight(e) {
-  dropZone.classList.add('drag-highlight');
-}
-
-function unhighlight(e) {
-  dropZone.classList.remove('drag-highlight');
-}
-
-// Handle dropped files
-dropZone.addEventListener('drop', handleDrop, false);
-
-function handleDrop(e) {
-  const dt = e.dataTransfer;
-  const files = dt.files;
-  
-  if (files.length > 0) {
-    handleFiles(files);
+  function preventDefaults(e) {
+    e.preventDefault();
+    // NOTE: do NOT stopPropagation — it blocks the drop event reaching handleDrop
   }
-}
+
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+  });
+
+  // Use a counter to avoid dragleave flicker when hovering over child elements
+  dropZone.addEventListener('dragenter', (e) => {
+    dragCounter++;
+    dropZone.classList.add('drag-highlight');
+  }, false);
+
+  dropZone.addEventListener('dragleave', (e) => {
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      dropZone.classList.remove('drag-highlight');
+    }
+  }, false);
+
+  dropZone.addEventListener('drop', (e) => {
+    dragCounter = 0;
+    dropZone.classList.remove('drag-highlight');
+    const dt = e.dataTransfer;
+    if (dt && dt.files && dt.files.length > 0) {
+      handleFiles(dt.files);
+    }
+  }, false);
+});
 
 async function handleFiles(files) {
   for (const file of files) {
